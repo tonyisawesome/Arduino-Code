@@ -419,7 +419,7 @@ void readSensors(float distance[6], int grids[6])
     distance[i] = distInCM(i, EXPLORE);
     grids[i]	  = distInGrids(distance[i] - offset[i]);
     rectifyGrid(grids, i);				//logically correct number of grids
-    //updateGrid(grids, i);
+    updateGrid(grids, i);
   }
 }
 
