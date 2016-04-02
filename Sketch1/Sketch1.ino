@@ -143,9 +143,9 @@ void initialisation() {
   }
 
   //initialise offset array
-  offset[FRONT_LEFT]		  = offset[FRONT_RIGHT]	     = FRONT_OFFSET;         //front left and right are reflective to each other
-  offset[FRONT_MID]								                   = FRONT_MID_OFFSET;
-  offset[LONG_LEFT]								                   = LONG_LEFT_OFFSET;
+  offset[FRONT_LEFT]	  = offset[FRONT_RIGHT]	     = FRONT_OFFSET;         //front left and right are reflective to each other
+  offset[FRONT_MID]								     = FRONT_MID_OFFSET;
+  offset[LONG_LEFT]								     = LONG_LEFT_OFFSET;
   offset[SIDE_RIGHT_BACK] = offset[SIDE_RIGHT_FRONT] = SIDE_RIGHT_OFFSET;    //side right back and front are reflective to each other
 }
 
@@ -164,24 +164,6 @@ void loop()
     if (!explore) readCommand();
 
     switch (command[0]) {
-
-      case '0':
-        move_up(1); motion = '0';
-        Serial.println(_direction);
-        location();
-        break;
-
-      case '1':
-        move_right_1(); motion = '1';
-        Serial.println(_direction);
-        location();
-        break;
-
-      case '2':
-        move_left_1();  motion = '2';
-        Serial.println(_direction);
-        location();
-        break;
       
       //begin exploration
       case '4':
@@ -271,48 +253,6 @@ void getM2PulseHYQ()
     braking_right = true;
   }
 }
-
-/*void straight()
-{
-  // set desired rpm
-  ideal_rpm1 = 100.0;
-  ideal_rpm2 = 96.5;
-
-  m1_tick = 0;
-  m2_tick = 0;
-
-  float FL_sensor = distInCM(FRONT_LEFT, EXPLORE);
-  float FR_sensor = distInCM(FRONT_RIGHT, EXPLORE);
-  float FM_sensor = distInCM(FRONT_MID, EXPLORE);
-
-  //=========Ramp up==========
-  if ((FL_sensor > (FRONT_OFFSET + 0.7)) && (FR_sensor > (FRONT_OFFSET + 0.7)) && (FM_sensor > (FRONT_MID_OFFSET + 0.7))) {
-    for (int i = 0; i < 100; i++) {
-      delay(3);
-      md.setM1Speed(i);
-      md.setM2Speed(i);
-    }
-  }
-
-  while ((FL_sensor > (FRONT_OFFSET + 0.7)) && (FR_sensor > (FRONT_OFFSET + 0.7)) && (FM_sensor > (FRONT_MID_OFFSET + 0.7))) {
-    pidHYQ(true, true);
-    delay(3);
-    md.setM1Speed(new_m1_spd);
-    md.setM2Speed(new_m2_spd);
-
-    FL_sensor = distInCM(FRONT_LEFT, EXPLORE);
-    FR_sensor = distInCM(FRONT_RIGHT, EXPLORE);
-    FM_sensor = distInCM(FRONT_MID, EXPLORE);
-  }
-
-  md.setM1Brake(400);
-  md.setM2Brake(400);
-  delay(100);
-  md.setM1Brake(0);
-  md.setM2Brake(0);
-  delay(100);
-  reset();
-}*/
 
 void move_upHYQ_10000() {
   m1_tick   = 0;
@@ -480,12 +420,12 @@ float distInCM(int sensorpin, int samplesize)
 {
   switch (sensorpin) {
     case FRONT_LEFT      : return fl.distance(samplesize);
-    case FRONT_RIGHT	   : return fr.distance(samplesize);
-    case FRONT_MID		   : return fm.distance(samplesize);
-    case LONG_LEFT		   : return ll.distance(samplesize);
+    case FRONT_RIGHT	 : return fr.distance(samplesize);
+    case FRONT_MID		 : return fm.distance(samplesize);
+    case LONG_LEFT		 : return ll.distance(samplesize);
     case SIDE_RIGHT_FRONT: return srf.distance(samplesize);
     case SIDE_RIGHT_BACK : return srb.distance(samplesize);
-    default				       : return -2;
+    default				 : return -2;
   }
 }
 
@@ -560,8 +500,8 @@ void updateGrid(int grids[6], int sensor)
   //when an obstacle is detected
   if (grids[sensor] != -1) {
     offset = grids[sensor]  + 2;
-    x	     = coordinates[X] + offset;
-    y	     = coordinates[Y] + offset;
+    x	   = coordinates[X] + offset;
+    y	   = coordinates[Y] + offset;
 
     if (x < 15 && y < 20) _map[y][x] = '1';	  //mark obstacle within map
   }
@@ -578,30 +518,25 @@ void robotCalibration(float distance[6], int grids[6])
 
     //too close to the right side
     if (distance[SIDE_RIGHT_FRONT] < (SIDE_RIGHT_OFFSET - 1.1) || distance[SIDE_RIGHT_BACK] < (SIDE_RIGHT_OFFSET - 1.1)) {
-      Serial.println("T sideProximityCalibration()");
       sideProximityCalibration();
     }
 
     //too far from the right side
     else if (distance[SIDE_RIGHT_FRONT] > (SIDE_RIGHT_OFFSET + 1.1) || distance[SIDE_RIGHT_BACK] > (SIDE_RIGHT_OFFSET + 1.1)) {
-      Serial.println("T sideProximityCalibration()");
       sideProximityCalibration();
     }
 
     //in a corner
     else if (grids[FRONT_LEFT] == 0 && grids[FRONT_RIGHT] == 0) {
-      Serial.println("T sideProximityCalibration()");
       sideProximityCalibration();
     }
 
     //side adjacent obstacles on the extreme left and right
-    Serial.println("T parallelCalibration()");
     parallelCalibration();
   }
 
   //front adjacent obstacles
   if (explore && grids[FRONT_LEFT] == 0 && grids[FRONT_RIGHT] == 0) {
-    Serial.println("T proximityCalibration()");
     proximityCalibration();
   }
 }
@@ -609,12 +544,12 @@ void robotCalibration(float distance[6], int grids[6])
 /*Calibrate robot during initialisation to ensure that it is in 3x3.*/
 void initialCalibration()
 {
-  float front_left  = distInCM(FRONT_LEFT, EXPLORE);
+  float front_left  = distInCM(FRONT_LEFT,  EXPLORE);
   float front_right = distInCM(FRONT_RIGHT, EXPLORE);
-  float long_left   = distInCM(LONG_LEFT, EXPLORE);
-  int FL_grids	    = distInGrids(front_left - FRONT_OFFSET);
+  float long_left   = distInCM(LONG_LEFT,   EXPLORE);
+  int FL_grids	    = distInGrids(front_left  - FRONT_OFFSET);
   int FR_grids	    = distInGrids(front_right - FRONT_OFFSET);
-  int LL_grids	    = distInGrids(long_left - LONG_LEFT_OFFSET);
+  int LL_grids	    = distInGrids(long_left   - LONG_LEFT_OFFSET);
 
   //face robot towards the left wall in the start zone
   if (FL_grids == 0 && FR_grids == 0 && LL_grids == 0) {
