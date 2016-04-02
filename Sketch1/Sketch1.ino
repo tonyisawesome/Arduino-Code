@@ -34,12 +34,12 @@ volatile double pulse_prev_m1 = 0.0, pulse_now_m1 = 0.0, pulse_prev_m2 = 0.0, pu
 #define SHORT 1080
 #define LONG  20150
 
-SharpIR fl  = SharpIR(FRONT_LEFT, SHORT);         //front left
-SharpIR fr  = SharpIR(FRONT_RIGHT, SHORT);        //front right
-SharpIR fm  = SharpIR(FRONT_MID, SHORT);          //front mid
-SharpIR ll  = SharpIR(LONG_LEFT, LONG);           //long left sensor
-SharpIR srf = SharpIR(SIDE_RIGHT_FRONT, SHORT);   //side right front
-SharpIR srb = SharpIR(SIDE_RIGHT_BACK, SHORT);    //side right back
+SharpIR fl  = SharpIR(FRONT_LEFT,  SHORT);          //front left
+SharpIR fr  = SharpIR(FRONT_RIGHT, SHORT);          //front right
+SharpIR fm  = SharpIR(FRONT_MID,   SHORT);          //front mid
+SharpIR ll  = SharpIR(LONG_LEFT,   LONG);           //long left sensor
+SharpIR srf = SharpIR(SIDE_RIGHT_FRONT, SHORT);     //side right front
+SharpIR srb = SharpIR(SIDE_RIGHT_BACK,  SHORT);     //side right back
 
 //Left is m1 right is m2
 int pinM1 = 3;
@@ -69,6 +69,7 @@ static int coordinates[2];
 static int _direction = E;        //face east in the start zone
 
 static char _map[20][15];
+
 uint8_t EnPwmCmd[4] = { 0x44, 0x02, 0xbb, 0x01 };
 
 // # Connection:
