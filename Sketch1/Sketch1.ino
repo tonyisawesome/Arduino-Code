@@ -164,6 +164,26 @@ void loop()
     if (!explore) readCommand();
 
     switch (command[0]) {
+
+	case '0':
+		move_up(1); motion = '0';
+		location();
+		break;
+
+	case '1':
+		move_right_1(); motion = '1';
+		location();
+		break;
+
+	case '2':
+		move_left_1(); motion = '2';
+		location();
+		break;
+
+	case '3':
+		move_back_1(); motion = '3';
+		location();
+		break;
       
       //begin exploration
       case '4':
@@ -173,7 +193,13 @@ void loop()
         explore = true;
         break;
 
-      case 'l':
+	  //begin shortest path
+	  case '5':
+		Serial.println("T Begin shortest path...");
+		explore = false;
+		break;
+
+      case 'p':
         location();
         printMap();
         break;
@@ -182,26 +208,26 @@ void loop()
         Serial.println("T Error: Invalid command!");
     }
 
-    if (explore) {
-      location();
-
-      Serial.print("T direction: "); Serial.println(_direction);
-
-      if ((coordinates[X] == 1 && coordinates[Y] == 18) && _direction == S)
-        explore = false;				//stop exploration
-      else {
-        readSensors(distance, grids);
-        printGrids(grids);
-        robotCalibration(distance, grids);
-        delay(10);
-        makeDecision(grids);
-        updatePrevStates(grids);
-      }
-    }
-
-    //printMap();
-
     memset(command, 0, sizeof(command));    //clear array
+  }
+
+  while (explore) {
+	  location();						//update current location
+
+	  //Serial.print("T direction: "); Serial.println(_direction);
+
+	  if ((coordinates[X] == 1 && coordinates[Y] == 18) && _direction == S)
+		  explore = false;				//stop exploration
+	  else {
+		  readSensors(distance, grids);
+		  printGrids(grids);
+		  robotCalibration(distance, grids);
+		  delay(10);
+		  makeDecision(grids);
+		  updatePrevStates(grids);		//end of current state
+	  }
+
+	  //printMap();
   }
 }
 
@@ -220,8 +246,8 @@ void readCommand()
 
 void pidHYQ(short forward_left, short forward_right) {
   long diff = m1_tick - m2_tick * RATIO;		// m2_tick_adjusted = m2_tick * constant,
-  // because two wheels have different size!
-  long diffSqr    = sq(diff) * 7 / 16;		  // use quadratic proportional term, ignore integral and differential
+												// because two wheels have different size!
+  long diffSqr    = sq(diff) * 7 / 16;		    // use quadratic proportional term, ignore integral and differential
   long adjustLeft = 0, adjustRight = 0;
 
   if (diff < 0)      adjustLeft  = diffSqr;
@@ -667,13 +693,13 @@ void compass()
     default : _direction += 0;
   }
 
-  _direction %= 4;                     //circular increment
+  _direction %= 4;						 //circular increment
   //i.e. 0 -> 1 -> 2 -> 3 -> 0 -> ...
 }
 
 void location()
-{ 
-  compass();
+{
+  compass();					//update direction
   
   if (motion == '0') {
     //coordinates only update when moving forward
@@ -686,21 +712,26 @@ void location()
     }
   }
 
-  _map[coordinates[Y]][coordinates[X]]     = 'X';
-  _map[coordinates[Y]-1][coordinates[X]]   = 'X';
-  _map[coordinates[Y]+1][coordinates[X]]   = 'X';
-  _map[coordinates[Y]][coordinates[X]-1]   = 'X';
-  _map[coordinates[Y]][coordinates[X]+1]   = 'X';
-  _map[coordinates[Y]+1][coordinates[X]+1] = 'X';
-  _map[coordinates[Y]-1][coordinates[X]-1] = 'X';
-  _map[coordinates[Y]-1][coordinates[X]+1] = 'X';
-  _map[coordinates[Y]+1][coordinates[X]-1] = 'X';
-
   Serial.print("T (");
   Serial.print(coordinates[X]);
   Serial.print(", ");
   Serial.print(coordinates[Y]);
   Serial.println(')');
+
+  updateMap();
+}
+
+void updateMap()
+{
+	_map[coordinates[Y]][coordinates[X]]         = 'X';
+	_map[coordinates[Y] - 1][coordinates[X]]     = 'X';
+	_map[coordinates[Y] + 1][coordinates[X]]     = 'X';
+	_map[coordinates[Y]][coordinates[X] - 1]     = 'X';
+	_map[coordinates[Y]][coordinates[X] + 1]     = 'X';
+	_map[coordinates[Y] + 1][coordinates[X] + 1] = 'X';
+	_map[coordinates[Y] - 1][coordinates[X] - 1] = 'X';
+	_map[coordinates[Y] - 1][coordinates[X] + 1] = 'X';
+	_map[coordinates[Y] + 1][coordinates[X] - 1] = 'X';
 }
 
 void printMap()
