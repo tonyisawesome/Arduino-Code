@@ -933,6 +933,7 @@ void updateGrid(int grids[6], int sensor)
 	}
 }
 
+/*Location of the sensor relative to the centre of the 3x3 robot.*/
 void sensorLocation(int sensor_coord[2], int relative_loc)
 {
 	switch (relative_loc) {
