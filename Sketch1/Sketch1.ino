@@ -49,9 +49,10 @@ static char command[SIZE];        //command received from RPi
 static char motion;
 static int offset[6];
 static int prev_state[6];
-static int value          = 0;
-static boolean test       = false;
-static boolean goal_zone  = false;
+static int value            = 0;
+static boolean test         = false;
+static boolean goal_zone    = false;
+static boolean turned_right = false;
 
 #define X     0                   //x-coordinate
 #define Y     1                   //y-coordinate
@@ -64,7 +65,6 @@ static int coordinates[2];
 static int _direction = E;        //face east in the start zone
 
 static char _map[20][15];
-static boolean turned_right = false;
 uint8_t EnPwmCmd[4] = { 0x44, 0x02, 0xbb, 0x01 };
 
 // # Connection:
@@ -165,22 +165,26 @@ void loop()
     if (!test) readCommand();
 
     switch (command[0]) {
-
+	
+	//move forward
 	case '0':
 		move_up(1); motion = '0';
 		location();
 		break;
 
+	//turn right
 	case '1':
 		move_right_1(); motion = '1';
 		location();
 		break;
 
+	//turn left
 	case '2':
 		move_left_1(); motion = '2';
 		location();
 		break;
 
+	//turn back
 	case '3':
 		move_back_1(); motion = '3';
 		location();
@@ -197,6 +201,7 @@ void loop()
 		Serial.println("T Begin shortest path...");
 		break;
 
+	  //print map
       case 'p':
         location();
         printMap();
@@ -360,9 +365,9 @@ void straight(){
     pidHYQ(true, true);
     //delay(2);
     
-//    front_left  = distInGrids(distInCM(FRONT_LEFT, 1) - offset[FRONT_LEFT]);
-//    front_right = distInGrids(distInCM(FRONT_RIGHT, 1) - offset[FRONT_RIGHT]);
-//    front_mid   = distInGrids(distInCM(FRONT_MID, 1) - offset[FRONT_MID]);
+    front_left  = distInGrids(distInCM(FRONT_LEFT, 1)  - offset[FRONT_LEFT]);
+    front_right = distInGrids(distInCM(FRONT_RIGHT, 1) - offset[FRONT_RIGHT]);
+    front_mid   = distInGrids(distInCM(FRONT_MID, 1)   - offset[FRONT_MID]);
   }
 
   md.setM1Brake(400);
@@ -521,22 +526,7 @@ void rectifyGrid(int grids[6], int i)
       grids[i] = prev_state[FRONT_RIGHT];
     }
   }
-}
-
-/*Mark obstacle on the map.*/
-void updateGrid(int grids[6], int sensor)
-{
-  int x, y, offset;
-
-  //when an obstacle is detected
-  if (grids[sensor] != -1) {
-    offset = grids[sensor]  + 2;
-    x	   = coordinates[X] + offset;
-    y	   = coordinates[Y] + offset;
-
-    if (x < 15 && y < 20) _map[y][x] = '1';	  //mark obstacle within map
-  }
-}
+ }
 
 /*======================================*/
 /*             Calibrations             */
@@ -756,6 +746,212 @@ void printMap()
   Serial.println("T ====================================");
 }
 
+/*Mark obstacle on the map.*/
+void updateGrid(int grids[6], int sensor)
+{
+	int x_obs, y_obs, x_sensor, y_sensor, offset;
+
+	//when an obstacle is detected
+	if (grids[sensor] != -1) {
+		switch (sensor) {
+		case FRONT_LEFT:
+			if (_direction == N) {
+				//sensor is at NW
+				x_sensor = coordinates[X] - 1;
+				y_sensor = coordinates[Y] - 1;
+				x_obs = x_sensor;
+				y_obs = y_sensor - 1 - grids[sensor];
+			}
+			else if (_direction == E) {
+				//sensor is at NE
+				x_sensor = coordinates[X] + 1;
+				y_sensor = coordinates[Y] - 1;
+				x_obs = x_sensor + 1 + grids[sensor];
+				y_obs = y_sensor;
+			}
+			else if (_direction == S) {
+				//sensor is at SE
+				x_sensor = coordinates[X] + 1;
+				y_sensor = coordinates[Y] + 1;
+				x_obs = x_sensor;
+				y_obs = y_sensor + 1 + grids[sensor];
+			}
+			else if (_direction == W) {
+				//sensor is at SW
+				x_sensor = coordinates[X] + 1;
+				y_sensor = coordinates[Y] + 1;
+				x_obs = x_sensor - 1 - grids[sensor];
+				y_obs = y_sensor;
+			}
+
+			break;
+
+		case FRONT_RIGHT:
+			if (_direction == N) {
+				//sensor is at NE
+				x_sensor = coordinates[X] + 1;
+				y_sensor = coordinates[Y] - 1;
+				x_obs = x_sensor;
+				y_obs = y_sensor - 1 - grids[sensor];
+			}
+			else if (_direction == E) {
+				//sensor is at SE
+				x_sensor = coordinates[X] + 1;
+				y_sensor = coordinates[Y] + 1;
+				x_obs = x_sensor + grids[sensor];
+				y_obs = y_sensor;
+			}
+			else if (_direction == S) {
+				//sensor is at SW
+				x_sensor = coordinates[X] + 1;
+				y_sensor = coordinates[Y] + 1;
+				x_obs = x_sensor;
+				y_obs = y_sensor + 1 + grids[sensor];
+			}
+			else if (_direction == W) {
+				//sensor is at NW
+				x_sensor = coordinates[X] - 1;
+				y_sensor = coordinates[Y] - 1;
+				x_obs = x_sensor - 1 - grids[sensor];
+				y_obs = y_sensor;
+			}
+
+			break;
+
+		case FRONT_MID:
+			if (_direction == N) {
+				//sensor is at N
+				x_sensor = coordinates[X];
+				y_sensor = coordinates[Y] - 1;
+				x_obs = x_sensor;
+				y_obs = y_sensor - 1 - grids[sensor];
+			}
+			else if (_direction == E) {
+				//sensor is at E
+				x_sensor = coordinates[X] + 1;
+				y_sensor = coordinates[Y];
+				x_obs = x_sensor + 1 + grids[sensor];
+				y_obs = y_sensor;
+			}
+			else if (_direction == S) {
+				//sensor is at S
+				x_sensor = coordinates[X];
+				y_sensor = coordinates[Y] + 1;
+				x_obs = x_sensor;
+				y_obs = y_sensor + 1 + grids[sensor];
+			}
+			else if (_direction == W) {
+				//sensor is at W
+				x_sensor = coordinates[X] - 1;
+				y_sensor = coordinates[Y];
+				x_obs = x_sensor - 1 - grids[sensor];
+				y_obs = y_sensor;
+			}
+
+			break;
+
+		case SIDE_RIGHT_FRONT:
+			if (_direction == N) {
+				//sensor is at NE
+				x_sensor = coordinates[X] + 1;
+				y_sensor = coordinates[Y] - 1;
+				x_obs = x_sensor + 1 + grids[sensor];
+				y_obs = y_sensor;
+			}
+			else if (_direction == E) {
+				//sensor is at SE
+				x_sensor = coordinates[X] + 1;
+				y_sensor = coordinates[Y] + 1;
+				x_obs = x_sensor;
+				y_obs = y_sensor + 1 + grids[sensor];
+			}
+			else if (_direction == S) {
+				//sensor is at SW
+				x_sensor = coordinates[X] + 1;
+				y_sensor = coordinates[Y] + 1;
+				x_obs = x_sensor - 1 - grids[sensor];
+				y_obs = y_sensor;
+			}
+			else if (_direction == W) {
+				//sensor is at NW
+				x_sensor = coordinates[X] - 1;
+				y_sensor = coordinates[Y] - 1;
+				x_obs = x_sensor;
+				y_obs = y_sensor - 1 - grids[sensor];
+			}
+
+			break;
+
+		case SIDE_RIGHT_BACK:
+			if (_direction == N) {
+				//sensor is at SE
+				x_sensor = coordinates[X] + 1;
+				y_sensor = coordinates[Y] + 1;
+				x_obs = x_sensor + 1 + grids[sensor];
+				y_obs = y_sensor;
+			}
+			else if (_direction == E) {
+				//sensor is at SW
+				x_sensor = coordinates[X] + 1;
+				y_sensor = coordinates[Y] + 1;
+				x_obs = x_sensor;
+				y_obs = y_sensor + 1 + grids[sensor];
+			}
+			else if (_direction == S) {
+				//sensor is at NW
+				x_sensor = coordinates[X] - 1;
+				y_sensor = coordinates[Y] - 1;
+				x_obs = x_sensor - 1 - grids[sensor];
+				y_obs = y_sensor;
+			}
+			else if (_direction == W) {
+				//sensor is at NE
+				x_sensor = coordinates[X] + 1;
+				y_sensor = coordinates[Y] - 1;
+				x_obs = x_sensor;
+				y_obs = y_sensor - 1 - grids[sensor];
+			}
+
+			break;
+
+		case LONG_LEFT:
+			if (_direction == N) {
+				//sensor is at SW
+				x_sensor = coordinates[X] + 1;
+				y_sensor = coordinates[Y] + 1;
+				x_obs = x_sensor - 1 - grids[sensor];
+				y_obs = y_sensor;
+			}
+			else if (_direction == E) {
+				//sensor is at NW
+				x_sensor = coordinates[X] - 1;
+				y_sensor = coordinates[Y] - 1;
+				x_obs = x_sensor;
+				y_obs = y_sensor - 1 - grids[sensor];
+			}
+			else if (_direction == S) {
+				//sensor is at NE
+				x_sensor = coordinates[X] + 1;
+				y_sensor = coordinates[Y] - 1;
+				x_obs = x_sensor + 1 + grids[sensor];
+				y_obs = y_sensor;
+			}
+			else if (_direction == W) {
+				//sensor is at SE
+				x_sensor = coordinates[X] + 1;
+				y_sensor = coordinates[Y] + 1;
+				x_obs = x_sensor;
+				y_obs = y_sensor + 1 + grids[sensor];
+			}
+
+			break;
+		}
+
+		//mark obstacle within map
+		if (x_obs < 15 && y_obs < 20) _map[y_obs][x_obs] = 'B';
+	}
+}
+
 /*======================================*/
 /*               Algorithm              */
 /*======================================*/
@@ -764,18 +960,18 @@ void makeDecision(int grids[6])
 {
   Serial.println("T Making decision...");
 
-  if (!turned_right && prev_state[SIDE_RIGHT_FRONT] != 0 && grids[SIDE_RIGHT_FRONT] != 0 && grids[SIDE_RIGHT_BACK] != 0) {
-    //no obstacles on the right side 
+  if (!turned_right &&  grids[SIDE_RIGHT_FRONT] != 0 && prev_state[SIDE_RIGHT_FRONT] != 0 && grids[SIDE_RIGHT_BACK] != 0) {
+    //no obstacles on the right side and did not turn right previously
     move_right_1(); motion = '1';
     turned_right = true;
   }
-  else if (grids[FRONT_RIGHT] == 0 || grids[FRONT_LEFT] == 0 || grids[FRONT_MID] == 0) {
+  else if (grids[FRONT_RIGHT] == 0 || grids[FRONT_MID] == 0 || grids[FRONT_LEFT] == 0) {
     //obstacle in front
-    if (grids[LONG_LEFT] == 0 && (grids[SIDE_RIGHT_FRONT] == 0 || grids[SIDE_RIGHT_BACK] == 0)) {
+    if (grids[LONG_LEFT] == 0 && (grids[SIDE_RIGHT_FRONT] == 0 || prev_state[SIDE_RIGHT_FRONT] == 0 || grids[SIDE_RIGHT_BACK] == 0)) {
       //obstacle on both left and right sides
       move_back_1(); motion = '3';
     }
-    else if (prev_state[SIDE_RIGHT_FRONT] == 0 || grids[SIDE_RIGHT_FRONT] == 0 || grids[SIDE_RIGHT_BACK] == 0) {
+    else if (grids[SIDE_RIGHT_FRONT] == 0 || prev_state[SIDE_RIGHT_FRONT] == 0 || grids[SIDE_RIGHT_BACK] == 0) {
       //obstacle on the right side
       move_left_1(); motion = '2';
     }
