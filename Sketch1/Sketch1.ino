@@ -62,6 +62,10 @@ static int coordinates[2];
 #define E     1                   //east
 #define S     2                   //south
 #define W     3                   //west
+#define NE    4					  //north-east
+#define SE    5					  //south-east
+#define SW    6					  //south-west
+#define NW    7					  //north-west
 static int _direction = E;        //face east in the start zone
 
 static char _map[20][15];
@@ -749,7 +753,8 @@ void printMap()
 /*Mark obstacle on the map.*/
 void updateGrid(int grids[6], int sensor)
 {
-	int x_obs, y_obs, x_sensor, y_sensor, offset;
+	int x_obs, y_obs, offset;
+	int sensor_coord[2];
 
 	//when an obstacle is detected
 	if (grids[sensor] != -1) {
@@ -757,31 +762,27 @@ void updateGrid(int grids[6], int sensor)
 		case FRONT_LEFT:
 			if (_direction == N) {
 				//sensor is at NW
-				x_sensor = coordinates[X] - 1;
-				y_sensor = coordinates[Y] - 1;
-				x_obs = x_sensor;
-				y_obs = y_sensor - 1 - grids[sensor];
+				sensorLocation(sensor_coord, NW);
+				x_obs = sensor_coord[X];
+				y_obs = sensor_coord[Y] - 1 - grids[sensor];
 			}
 			else if (_direction == E) {
 				//sensor is at NE
-				x_sensor = coordinates[X] + 1;
-				y_sensor = coordinates[Y] - 1;
-				x_obs = x_sensor + 1 + grids[sensor];
-				y_obs = y_sensor;
+				sensorLocation(sensor_coord, NE);
+				x_obs = sensor_coord[X] + 1 + grids[sensor];
+				y_obs = sensor_coord[Y];
 			}
 			else if (_direction == S) {
 				//sensor is at SE
-				x_sensor = coordinates[X] + 1;
-				y_sensor = coordinates[Y] + 1;
-				x_obs = x_sensor;
-				y_obs = y_sensor + 1 + grids[sensor];
+				sensorLocation(sensor_coord, SE);
+				x_obs = sensor_coord[X];
+				y_obs = sensor_coord[Y] + 1 + grids[sensor];
 			}
 			else if (_direction == W) {
 				//sensor is at SW
-				x_sensor = coordinates[X] + 1;
-				y_sensor = coordinates[Y] + 1;
-				x_obs = x_sensor - 1 - grids[sensor];
-				y_obs = y_sensor;
+				sensorLocation(sensor_coord, SW);
+				x_obs = sensor_coord[X] - 1 - grids[sensor];
+				y_obs = sensor_coord[Y];
 			}
 
 			break;
@@ -789,31 +790,27 @@ void updateGrid(int grids[6], int sensor)
 		case FRONT_RIGHT:
 			if (_direction == N) {
 				//sensor is at NE
-				x_sensor = coordinates[X] + 1;
-				y_sensor = coordinates[Y] - 1;
-				x_obs = x_sensor;
-				y_obs = y_sensor - 1 - grids[sensor];
+				sensorLocation(sensor_coord, NE);
+				x_obs = sensor_coord[X];
+				y_obs = sensor_coord[Y] - 1 - grids[sensor];
 			}
 			else if (_direction == E) {
 				//sensor is at SE
-				x_sensor = coordinates[X] + 1;
-				y_sensor = coordinates[Y] + 1;
-				x_obs = x_sensor + grids[sensor];
-				y_obs = y_sensor;
+				sensorLocation(sensor_coord, SE);
+				x_obs = sensor_coord[X] + grids[sensor];
+				y_obs = sensor_coord[Y];
 			}
 			else if (_direction == S) {
 				//sensor is at SW
-				x_sensor = coordinates[X] + 1;
-				y_sensor = coordinates[Y] + 1;
-				x_obs = x_sensor;
-				y_obs = y_sensor + 1 + grids[sensor];
+				sensorLocation(sensor_coord, SW);
+				x_obs = sensor_coord[X];
+				y_obs = sensor_coord[Y] + 1 + grids[sensor];
 			}
 			else if (_direction == W) {
 				//sensor is at NW
-				x_sensor = coordinates[X] - 1;
-				y_sensor = coordinates[Y] - 1;
-				x_obs = x_sensor - 1 - grids[sensor];
-				y_obs = y_sensor;
+				sensorLocation(sensor_coord, NW);
+				x_obs = sensor_coord[X] - 1 - grids[sensor];
+				y_obs = sensor_coord[Y];
 			}
 
 			break;
@@ -821,31 +818,27 @@ void updateGrid(int grids[6], int sensor)
 		case FRONT_MID:
 			if (_direction == N) {
 				//sensor is at N
-				x_sensor = coordinates[X];
-				y_sensor = coordinates[Y] - 1;
-				x_obs = x_sensor;
-				y_obs = y_sensor - 1 - grids[sensor];
+				sensorLocation(sensor_coord, N);
+				x_obs = sensor_coord[X];
+				y_obs = sensor_coord[Y] - 1 - grids[sensor];
 			}
 			else if (_direction == E) {
 				//sensor is at E
-				x_sensor = coordinates[X] + 1;
-				y_sensor = coordinates[Y];
-				x_obs = x_sensor + 1 + grids[sensor];
-				y_obs = y_sensor;
+				sensorLocation(sensor_coord, E);
+				x_obs = sensor_coord[X] + 1 + grids[sensor];
+				y_obs = sensor_coord[Y];
 			}
 			else if (_direction == S) {
 				//sensor is at S
-				x_sensor = coordinates[X];
-				y_sensor = coordinates[Y] + 1;
-				x_obs = x_sensor;
-				y_obs = y_sensor + 1 + grids[sensor];
+				sensorLocation(sensor_coord, S);
+				x_obs = sensor_coord[X];
+				y_obs = sensor_coord[Y] + 1 + grids[sensor];
 			}
 			else if (_direction == W) {
 				//sensor is at W
-				x_sensor = coordinates[X] - 1;
-				y_sensor = coordinates[Y];
-				x_obs = x_sensor - 1 - grids[sensor];
-				y_obs = y_sensor;
+				sensorLocation(sensor_coord, W);
+				x_obs = sensor_coord[X] - 1 - grids[sensor];
+				y_obs = sensor_coord[Y];
 			}
 
 			break;
@@ -853,31 +846,27 @@ void updateGrid(int grids[6], int sensor)
 		case SIDE_RIGHT_FRONT:
 			if (_direction == N) {
 				//sensor is at NE
-				x_sensor = coordinates[X] + 1;
-				y_sensor = coordinates[Y] - 1;
-				x_obs = x_sensor + 1 + grids[sensor];
-				y_obs = y_sensor;
+				sensorLocation(sensor_coord, NE);
+				x_obs = sensor_coord[X] + 1 + grids[sensor];
+				y_obs = sensor_coord[Y];
 			}
 			else if (_direction == E) {
 				//sensor is at SE
-				x_sensor = coordinates[X] + 1;
-				y_sensor = coordinates[Y] + 1;
-				x_obs = x_sensor;
-				y_obs = y_sensor + 1 + grids[sensor];
+				sensorLocation(sensor_coord, SE);
+				x_obs = sensor_coord[X];
+				y_obs = sensor_coord[Y] + 1 + grids[sensor];
 			}
 			else if (_direction == S) {
 				//sensor is at SW
-				x_sensor = coordinates[X] + 1;
-				y_sensor = coordinates[Y] + 1;
-				x_obs = x_sensor - 1 - grids[sensor];
-				y_obs = y_sensor;
+				sensorLocation(sensor_coord, SW);
+				x_obs = sensor_coord[X] - 1 - grids[sensor];
+				y_obs = sensor_coord[Y];
 			}
 			else if (_direction == W) {
 				//sensor is at NW
-				x_sensor = coordinates[X] - 1;
-				y_sensor = coordinates[Y] - 1;
-				x_obs = x_sensor;
-				y_obs = y_sensor - 1 - grids[sensor];
+				sensorLocation(sensor_coord, NW);
+				x_obs = sensor_coord[X];
+				y_obs = sensor_coord[Y] - 1 - grids[sensor];
 			}
 
 			break;
@@ -885,31 +874,27 @@ void updateGrid(int grids[6], int sensor)
 		case SIDE_RIGHT_BACK:
 			if (_direction == N) {
 				//sensor is at SE
-				x_sensor = coordinates[X] + 1;
-				y_sensor = coordinates[Y] + 1;
-				x_obs = x_sensor + 1 + grids[sensor];
-				y_obs = y_sensor;
+				sensorLocation(sensor_coord, SE);
+				x_obs = sensor_coord[X] + 1 + grids[sensor];
+				y_obs = sensor_coord[Y];
 			}
 			else if (_direction == E) {
 				//sensor is at SW
-				x_sensor = coordinates[X] + 1;
-				y_sensor = coordinates[Y] + 1;
-				x_obs = x_sensor;
-				y_obs = y_sensor + 1 + grids[sensor];
+				sensorLocation(sensor_coord, SW);
+				x_obs = sensor_coord[X];
+				y_obs = sensor_coord[Y] + 1 + grids[sensor];
 			}
 			else if (_direction == S) {
 				//sensor is at NW
-				x_sensor = coordinates[X] - 1;
-				y_sensor = coordinates[Y] - 1;
-				x_obs = x_sensor - 1 - grids[sensor];
-				y_obs = y_sensor;
+				sensorLocation(sensor_coord, NW);
+				x_obs = sensor_coord[X] - 1 - grids[sensor];
+				y_obs = sensor_coord[Y];
 			}
 			else if (_direction == W) {
 				//sensor is at NE
-				x_sensor = coordinates[X] + 1;
-				y_sensor = coordinates[Y] - 1;
-				x_obs = x_sensor;
-				y_obs = y_sensor - 1 - grids[sensor];
+				sensorLocation(sensor_coord, NE);
+				x_obs = sensor_coord[X];
+				y_obs = sensor_coord[Y] - 1 - grids[sensor];
 			}
 
 			break;
@@ -917,31 +902,27 @@ void updateGrid(int grids[6], int sensor)
 		case LONG_LEFT:
 			if (_direction == N) {
 				//sensor is at SW
-				x_sensor = coordinates[X] + 1;
-				y_sensor = coordinates[Y] + 1;
-				x_obs = x_sensor - 1 - grids[sensor];
-				y_obs = y_sensor;
+				sensorLocation(sensor_coord, SW);
+				x_obs = sensor_coord[X] - 1 - grids[sensor];
+				y_obs = sensor_coord[Y];
 			}
 			else if (_direction == E) {
 				//sensor is at NW
-				x_sensor = coordinates[X] - 1;
-				y_sensor = coordinates[Y] - 1;
-				x_obs = x_sensor;
-				y_obs = y_sensor - 1 - grids[sensor];
+				sensorLocation(sensor_coord, NW);
+				x_obs = sensor_coord[X];
+				y_obs = sensor_coord[Y] - 1 - grids[sensor];
 			}
 			else if (_direction == S) {
 				//sensor is at NE
-				x_sensor = coordinates[X] + 1;
-				y_sensor = coordinates[Y] - 1;
-				x_obs = x_sensor + 1 + grids[sensor];
-				y_obs = y_sensor;
+				sensorLocation(sensor_coord, NE);
+				x_obs = sensor_coord[X] + 1 + grids[sensor];
+				y_obs = sensor_coord[Y];
 			}
 			else if (_direction == W) {
 				//sensor is at SE
-				x_sensor = coordinates[X] + 1;
-				y_sensor = coordinates[Y] + 1;
-				x_obs = x_sensor;
-				y_obs = y_sensor + 1 + grids[sensor];
+				sensorLocation(sensor_coord, SE);
+				x_obs = sensor_coord[X];
+				y_obs = sensor_coord[Y] + 1 + grids[sensor];
 			}
 
 			break;
@@ -949,6 +930,45 @@ void updateGrid(int grids[6], int sensor)
 
 		//mark obstacle within map
 		if (x_obs < 15 && y_obs < 20) _map[y_obs][x_obs] = 'B';
+	}
+}
+
+void sensorLocation(int sensor_coord[2], int relative_loc)
+{
+	switch (relative_loc) {
+	case N:
+		sensor_coord[X] = coordinates[X];
+		sensor_coord[Y] = coordinates[Y] - 1;
+		break;
+	case E:
+		sensor_coord[X] = coordinates[X] + 1;
+		sensor_coord[Y] = coordinates[Y];
+		break;
+	case S:
+		sensor_coord[X] = coordinates[X];
+		sensor_coord[Y] = coordinates[Y] + 1;
+		break;
+	case W:
+		sensor_coord[X] = coordinates[X] - 1;
+		sensor_coord[Y] = coordinates[Y];
+		break;
+	case NE:
+		sensor_coord[X] = coordinates[X] + 1;
+		sensor_coord[Y] = coordinates[Y] - 1;
+		break;
+	case SE:
+		sensor_coord[X] = coordinates[X] + 1;
+		sensor_coord[Y] = coordinates[Y] + 1;
+		break;
+	case SW:
+		sensor_coord[X] = coordinates[X] - 1;
+		sensor_coord[Y] = coordinates[Y] + 1;
+		break;
+	case NW:
+		sensor_coord[X] = coordinates[X] - 1;
+		sensor_coord[Y] = coordinates[Y] - 1;
+		break;
+	default: sensor_coord[X] += 0; sensor_coord[Y] += 0; 
 	}
 }
 
