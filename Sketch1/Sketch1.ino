@@ -49,8 +49,9 @@ static char command[SIZE];        //command received from RPi
 static char motion;
 static int offset[6];
 static int prev_state[6];
-static int value = 0;
-static boolean explore = false;
+static int value          = 0;
+static boolean test       = false;
+static boolean goal_zone  = false;
 
 #define X     0                   //x-coordinate
 #define Y     1                   //y-coordinate
@@ -60,7 +61,7 @@ static int coordinates[2];
 #define E     1                   //east
 #define S     2                   //south
 #define W     3                   //west
-static int _direction = 1;        //face east in the start zone
+static int _direction = E;        //face east in the start zone
 
 static char _map[20][15];
 static boolean turned_right = false;
@@ -92,7 +93,7 @@ void setup()
   PCintPort::attachInterrupt(pinM2, getM2PulseHYQ, RISING);
 
   m1_kp = 4.967;		// 4.867;
-  m1_ki = 2.21227;	// 2.21227;
+  m1_ki = 2.21227;		// 2.21227;
   m1_kd = 2.676;
 
   m2_kp = 6.857;		// 6.857
@@ -116,7 +117,7 @@ void setup()
   Serial.println("T Ready!");
 
   //for testing
-  //explore	   = true;
+  //test	   = true;
   //command[0] = '4';
 }
 
@@ -129,7 +130,7 @@ void initialisation() {
   for (int y = 0; y < 20; y++) {
     for (int x = 0; x < 15; x++) {
       if ((12 <= x && x <= 14) && (0 <= y && y <= 2))
-        _map[y][x] = 'E';
+        _map[y][x] = 'G';
       else if ((0 <= x && x <= 2) && (17 <= y && y <= 19))
         _map[y][x] = 'S';
       else
@@ -160,8 +161,8 @@ void loop()
   float distance[6];
   
   //receive data from RPi
-  if (explore || Serial.available()) {
-    if (!explore) readCommand();
+  if (test || Serial.available()) {
+    if (!test) readCommand();
 
     switch (command[0]) {
 
@@ -187,16 +188,13 @@ void loop()
       
       //begin exploration
       case '4':
-        Serial.println("T Initial Calibration...");
         initialCalibration();
-        Serial.println("T Begin exploration...");
-        explore = true;
+        explore(distance, grids);
         break;
 
 	  //begin shortest path
 	  case '5':
 		Serial.println("T Begin shortest path...");
-		explore = false;
 		break;
 
       case 'p':
@@ -210,25 +208,6 @@ void loop()
 
     memset(command, 0, sizeof(command));    //clear array
   }
-
-  while (explore) {
-	  location();						//update current location
-
-	  //Serial.print("T direction: "); Serial.println(_direction);
-
-	  if ((coordinates[X] == 1 && coordinates[Y] == 18) && _direction == S)
-		  explore = false;				//stop exploration
-	  else {
-		  readSensors(distance, grids);
-		  printGrids(grids);
-		  robotCalibration(distance, grids);
-		  delay(10);
-		  makeDecision(grids);
-		  updatePrevStates(grids);		//end of current state
-	  }
-
-	  //printMap();
-  }
 }
 
 /*Read command from Raspberry Pi.*/
@@ -237,6 +216,32 @@ void readCommand()
   for (int i = 0; i < SIZE; i++) {
     command[i] = Serial.read();
   }
+}
+
+void explore(float distance[6], int grids[6])
+{
+	Serial.println("T Begin exploration...");
+
+	while (true) {
+		location();							//update current location
+
+		//Serial.print("T direction: "); Serial.println(_direction);
+
+		if (goal_zone && (coordinates[X] == 1 && coordinates[Y] == 18))
+			break;							//stop exploration
+		else {
+			readSensors(distance, grids);
+			printGrids(grids);
+			robotCalibration(distance, grids);
+			delay(10);
+			makeDecision(grids);
+			updatePrevStates(grids);		//end of current state
+		}
+
+		//printMap();
+	}
+
+	Serial.println("T End exploration...");
 }
 
 /*======================================*/
@@ -347,9 +352,9 @@ void move_back_1() {
 }
 
 void straight(){
-  int front_left  = distInGrids(distInCM(FRONT_LEFT, 1) - offset[FRONT_LEFT]);
+  int front_left  = distInGrids(distInCM(FRONT_LEFT, 1)  - offset[FRONT_LEFT]);
   int front_right = distInGrids(distInCM(FRONT_RIGHT, 1) - offset[FRONT_RIGHT]);
-  int front_mid   = distInGrids(distInCM(FRONT_MID, 1) - offset[FRONT_MID]);
+  int front_mid   = distInGrids(distInCM(FRONT_MID, 1)   - offset[FRONT_MID]);
   
   while(front_left != 0 || front_right != 0 || front_mid != 0){
     pidHYQ(true, true);
@@ -391,10 +396,10 @@ void reset()
   new_m2_spd = 0.0;
   ideal_rpm1 = 0.0;
   ideal_rpm2 = 0.0;
+  target_M1  = 0;
+  target_M2  = 0;
   braking_left  = false;
   braking_right = false;
-  target_M1 = 0;
-  target_M2 = 0;
 }
 
 /*======================================*/
@@ -567,32 +572,6 @@ void robotCalibration(float distance[6], int grids[6])
   }
 }
 
-/*Calibrate robot during initialisation to ensure that it is in 3x3.*/
-void initialCalibration()
-{
-  float front_left  = distInCM(FRONT_LEFT,  EXPLORE);
-  float front_right = distInCM(FRONT_RIGHT, EXPLORE);
-  float long_left   = distInCM(LONG_LEFT,   EXPLORE);
-  int FL_grids	    = distInGrids(front_left  - FRONT_OFFSET);
-  int FR_grids	    = distInGrids(front_right - FRONT_OFFSET);
-  int LL_grids	    = distInGrids(long_left   - LONG_LEFT_OFFSET);
-
-  //face robot towards the left wall in the start zone
-  if (FL_grids == 0 && FR_grids == 0 && LL_grids == 0) {
-    proximityCalibration();
-    delay(50);
-    move_left_1();
-    delay(50);
-    proximityCalibration();
-    delay(50);
-    parallelCalibration();
-    delay(50);
-    move_left_1();
-    delay(50);
-    parallelCalibration();
-  }
-}
-
 /*Calibrate the robot based on the closeness from front obstacles.*/
 void proximityCalibration()
 {
@@ -680,8 +659,36 @@ void sideProximityCalibration()
   move_left_1();
 }
 
+/*Calibrate robot during initialisation to ensure that it is in 3x3.*/
+void initialCalibration()
+{
+	Serial.println("T Initial Calibration...");
+
+	float front_left  = distInCM(FRONT_LEFT,  EXPLORE);
+	float front_right = distInCM(FRONT_RIGHT, EXPLORE);
+	float long_left   = distInCM(LONG_LEFT,   EXPLORE);
+	int FL_grids      = distInGrids(front_left  - FRONT_OFFSET);
+	int FR_grids      = distInGrids(front_right - FRONT_OFFSET);
+	int LL_grids      = distInGrids(long_left   - LONG_LEFT_OFFSET);
+
+	//face robot towards the left wall in the start zone
+	if (FL_grids == 0 && FR_grids == 0 && LL_grids == 0) {
+		proximityCalibration();
+		delay(50);
+		move_left_1();
+		delay(50);
+		proximityCalibration();
+		delay(50);
+		parallelCalibration();
+		delay(50);
+		move_left_1();
+		delay(50);
+		parallelCalibration();
+	}
+}
+
 /*======================================*/
-/*              Test Fields             */
+/*                Mapping               */
 /*======================================*/
 
 void compass()
@@ -699,7 +706,7 @@ void compass()
 
 void location()
 {
-  compass();					//update direction
+  compass();	//update direction
   
   if (motion == '0') {
     //coordinates only update when moving forward
@@ -708,9 +715,12 @@ void location()
       case E : coordinates[X] += 1; break;
       case S : coordinates[Y] += 1; break;
       case W : coordinates[X] -= 1; break;
-      default: coordinates[X] += 0; coordinates[Y] += 0;
+      default: coordinates[X] += 0; coordinates[Y] += 0;	//coordinates unchanged
     }
   }
+
+  //goal zone is entered
+  if (coordinates[X] == 13 && coordinates[Y] == 1)  goal_zone = true;
 
   Serial.print("T (");
   Serial.print(coordinates[X]);
@@ -718,20 +728,17 @@ void location()
   Serial.print(coordinates[Y]);
   Serial.println(')');
 
-  updateMap();
-}
+  /*Plot current location of the 3x3 robot on the map.*/
 
-void updateMap()
-{
-	_map[coordinates[Y]][coordinates[X]]         = 'X';
-	_map[coordinates[Y] - 1][coordinates[X]]     = 'X';
-	_map[coordinates[Y] + 1][coordinates[X]]     = 'X';
-	_map[coordinates[Y]][coordinates[X] - 1]     = 'X';
-	_map[coordinates[Y]][coordinates[X] + 1]     = 'X';
-	_map[coordinates[Y] + 1][coordinates[X] + 1] = 'X';
-	_map[coordinates[Y] - 1][coordinates[X] - 1] = 'X';
-	_map[coordinates[Y] - 1][coordinates[X] + 1] = 'X';
-	_map[coordinates[Y] + 1][coordinates[X] - 1] = 'X';
+  _map[coordinates[Y]][coordinates[X]]         = 'X';		//centre of 3x3 robot
+  _map[coordinates[Y] - 1][coordinates[X]]     = 'X';
+  _map[coordinates[Y] + 1][coordinates[X]]     = 'X';
+  _map[coordinates[Y]][coordinates[X] - 1]     = 'X';
+  _map[coordinates[Y]][coordinates[X] + 1]     = 'X';
+  _map[coordinates[Y] + 1][coordinates[X] + 1] = 'X';
+  _map[coordinates[Y] - 1][coordinates[X] - 1] = 'X';
+  _map[coordinates[Y] - 1][coordinates[X] + 1] = 'X';
+  _map[coordinates[Y] + 1][coordinates[X] - 1] = 'X';
 }
 
 void printMap()
@@ -758,9 +765,8 @@ void makeDecision(int grids[6])
   Serial.println("T Making decision...");
 
   if (!turned_right && prev_state[SIDE_RIGHT_FRONT] != 0 && grids[SIDE_RIGHT_FRONT] != 0 && grids[SIDE_RIGHT_BACK] != 0) {
-    //no obstacles on the right side
+    //no obstacles on the right side 
     move_right_1(); motion = '1';
-    Serial.println(1);
     turned_right = true;
   }
   else if (grids[FRONT_RIGHT] == 0 || grids[FRONT_LEFT] == 0 || grids[FRONT_MID] == 0) {
@@ -768,17 +774,16 @@ void makeDecision(int grids[6])
     if (grids[LONG_LEFT] == 0 && (grids[SIDE_RIGHT_FRONT] == 0 || grids[SIDE_RIGHT_BACK] == 0)) {
       //obstacle on both left and right sides
       move_back_1(); motion = '3';
-      Serial.println(3);
     }
     else if (prev_state[SIDE_RIGHT_FRONT] == 0 || grids[SIDE_RIGHT_FRONT] == 0 || grids[SIDE_RIGHT_BACK] == 0) {
       //obstacle on the right side
       move_left_1(); motion = '2';
-      Serial.println(2);
     }
   }
   else {
     move_up(1); motion = '0';
-    Serial.println(0);
     turned_right = false;		//reset turned_right
   }
+
+  Serial.println(motion);
 }
