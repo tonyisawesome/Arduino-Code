@@ -9,7 +9,7 @@ volatile  long  m1_tick = 0, m2_tick = 0, max_tick, new_m1_spd = 0, new_m2_spd =
 short braking_left = false, braking_right = false;
 
 #define BAUD_RATE           115200
-#define SIZE                1           //command size
+#define SIZE                3           //command size
 #define TIMEOUT             5000        //milliseconds
 #define EXPLORE             25          //sample size for exploration
 #define CALIBRATE           9           //sample size for calibration
@@ -125,7 +125,8 @@ void initialisation() {
 
 /*Keep looping until the end of time.*/
 void loop()
-{
+{	
+	int num_grids;
 	int grids[6];
 	float distance[6];
 
@@ -138,15 +139,17 @@ void loop()
 		//move forward
 		case '0':
 			ackCommand(command[0]);
-			move_up(1);
+			
+			//convert the last 2 chars in command to int
+			num_grids = command.substring(1).toInt();
+			move_up(num_grids);
 
 			if (explore) {
 				readSensors(distance, grids);
 				sendGrids(grids);
-        robotCalibration(distance, grids);
+				robotCalibration(distance, grids);
 			}
 
-      //robotCalibration(distance, grids);
 			location();
 			break;
 
@@ -158,10 +161,9 @@ void loop()
 			if (explore) {
 				readSensors(distance, grids);
 				sendGrids(grids);
-        robotCalibration(distance, grids);
+				robotCalibration(distance, grids);
 			}
 
-			//robotCalibration(distance, grids);
 			compass();
 			break;
 
@@ -173,10 +175,9 @@ void loop()
 			if (explore) {
 				readSensors(distance, grids);
 				sendGrids(grids);
-        robotCalibration(distance, grids);
+				robotCalibration(distance, grids);
 			}
 
-			//robotCalibration(distance, grids);
 			compass();
 			break;
 
@@ -188,17 +189,15 @@ void loop()
 			if (explore) {
 				readSensors(distance, grids);
 				sendGrids(grids);
-        robotCalibration(distance, grids);
+				robotCalibration(distance, grids);
 			}
 
-			//robotCalibration(distance, grids);
 			compass();
 			break;
 
 		//begin exploration
 		case '4':
 			ackCommand(command[0]);
-			Serial.println("T Initial Calibration...");
 			initialCalibration();
 			Serial.println("T Begin exploration...");
 			location();
@@ -274,22 +273,24 @@ void loop()
 /*Read command from Raspberry Pi.*/
 void readCommand()
 {
-	for (int i = 0; i < SIZE; i++) {
-		command[i] = Serial.read();
-	}
+	command = Serial.readline();
+
+	//for (int i = 0; i < SIZE; i++) {
+	//	command[i] = Serial.read();
+	//}
 
 	//if('0' <= command[0] < '3') charToInt();
 }
 
 /*Convert character to integer.*/
 void charToInt()
-{
-	int digit = 1;
+{	
+	/*int digit = 1;
 
 	for (int i = SIZE; i > 0; i--) {
 		value += (command[i] - '0') * digit;
 		digit *= 10;
-	}
+	}*/
 }
 
 /*Acknowledge command.*/
@@ -389,7 +390,7 @@ void move_up(int grid)
 	case 9:  left_motor = 2651; right_motor = 2651; break;
 	case 10: left_motor = 2945; right_motor = 2945; break;
 	default: left_motor = 0;    right_motor = 0;
-		Serial.println("T Invalid number of grids!");
+		Serial.println("T Maximum of 10 grids allowed!");
 	}
 
 	execute_move(true, true, left_motor, 17, right_motor, 20);
@@ -592,6 +593,8 @@ void robotCalibration(float distance[6], int grids[6])
 /*Calibrate robot during initialisation to ensure that it is in 3x3.*/
 void initialCalibration()
 {
+	Serial.println("T Initial Calibration...");
+
 	//face robot towards the left wall in the start zone
 	float front_left  = distInCM(FRONT_LEFT, EXPLORE);
 	float front_right = distInCM(FRONT_RIGHT, EXPLORE);
