@@ -9,7 +9,6 @@ volatile  long  m1_tick = 0, m2_tick = 0, max_tick, new_m1_spd = 0, new_m2_spd =
 short braking_left = false, braking_right = false;
 
 #define BAUD_RATE           115200
-#define SIZE                3           //command size
 #define TIMEOUT             5000        //milliseconds
 #define EXPLORE             25          //sample size for exploration
 #define CALIBRATE           9           //sample size for calibration
@@ -94,9 +93,6 @@ void initialisation() {
 	//initialise coordinates
 	coordinates[X] = 1;
 	coordinates[Y] = 18;
-
-	//initialise command array
-	for (int i = 0; i < SIZE; i++) command[i] = '_';
 
 	//initialise offset array
 	offset[FRONT_LEFT]		= offset[FRONT_RIGHT]	   = FRONT_OFFSET;         //front left and right are reflective to each other
@@ -321,22 +317,6 @@ void getM2PulseHYQ()
 		md.setM2Brake(400);
 		braking_right = true;
 	}
-}
-
-
-
-void move_upHYQ_10000() {
-	m1_tick = 0;
-	m2_tick = 0;
-	target_M1 = 8000;
-	target_M2 = 8000;
-
-	while (!braking_left && !braking_right) {
-		pidHYQ(true, true);
-		delay(2);
-	}
-
-	reset();
 }
 
 void execute_move(short forward_left, short forward_right, int tm1, int pbm1, int tm2, int pbm2) {
