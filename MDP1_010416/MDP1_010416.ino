@@ -42,7 +42,7 @@ SharpIR srb = SharpIR(SIDE_RIGHT_BACK, SHORT);     //side right back
 //Left is m1 right is m2
 int pinM1 = 3;
 int pinM2 = 5;
-static char command[SIZE];        //command received from RPi
+static String command;        //command received from RPi
 static int offset[6];
 static int prev_state[6];
 static int value = 0;
@@ -209,7 +209,7 @@ void loop()
 		//begin fastest run
 		case '5':
 			ackCommand(command[0]);
-      explore = false;
+		    explore = false;
 			break;
 
 		//ALGO Front Calibration
@@ -234,30 +234,30 @@ void loop()
 			break;
 
 		case 'i':
-      ackCommand(command[0]);
+			ackCommand(command[0]);
 			Serial.println("T Proximity calibration...");
 			proximityCalibration();
 			break;
 
 		case 'o':
-      ackCommand(command[0]);
+			ackCommand(command[0]);
 			Serial.println("T Side proximity calibration...");
 			sideProximityCalibration();
 			break;
 
 		case 'p':
-      ackCommand(command[0]);
+			ackCommand(command[0]);
 			Serial.println("T Parallel calibration...");
 			parallelCalibration();
 			break;
 
 		case 'l':
-      ackCommand(command[0]);
+			ackCommand(command[0]);
 			printMap();
 			break;
 
 		case 's':
-      ackCommand(command[0]);
+			ackCommand(command[0]);
 			readSensors(distance, grids);
 			sendGrids(grids);
 			break;
@@ -266,14 +266,14 @@ void loop()
 			Serial.println("T Error: Invalid command!");
 		}
 
-		memset(command, 0, sizeof(command));    //clear array
+		//memset(command, 0, sizeof(command));    //clear array
 	}
 }
 
 /*Read command from Raspberry Pi.*/
 void readCommand()
 {
-	command = Serial.readline();
+	command = Serial.readString();
 
 	//for (int i = 0; i < SIZE; i++) {
 	//	command[i] = Serial.read();

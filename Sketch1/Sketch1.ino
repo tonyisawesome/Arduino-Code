@@ -47,6 +47,7 @@ int pinM2 = 5;
 static double m1_kp, m1_ki, m1_kd, m2_kp, m2_ki, m2_kd, m1_k1, m1_k2, m1_k3, m2_k1, m2_k2, m2_k3;
 static char command[SIZE];        //command received from RPi
 static char motion;
+static char map_loc;
 static int offset[6];
 static int prev_state[6];
 static int value            = 0;
@@ -175,24 +176,28 @@ void loop()
 	case '0':
 		move_up(1); motion = '0';
 		location();
+		readSensors(distance, grids);
 		break;
 
 	//turn right
 	case '1':
 		move_right_1(); motion = '1';
 		location();
+		readSensors(distance, grids);
 		break;
 
 	//turn left
 	case '2':
 		move_left_1(); motion = '2';
 		location();
+		readSensors(distance, grids);
 		break;
 
 	//turn back
 	case '3':
 		move_back_1(); motion = '3';
 		location();
+		readSensors(distance, grids);
 		break;
       
       //begin exploration
@@ -208,7 +213,7 @@ void loop()
 
 	  //print map
       case 'p':
-        location();
+        //location();
         printMap();
         break;
 
@@ -235,7 +240,7 @@ void explore(float distance[6], int grids[6])
 	while (true) {
 		location();							//update current location
 
-		//Serial.print("T direction: "); Serial.println(_direction);
+		Serial.print("T direction: "); Serial.println(_direction);
 
 		if (goal_zone && (coordinates[X] == 1 && coordinates[Y] == 18))
 			break;							//stop exploration
@@ -444,7 +449,7 @@ void readSensors(float distance[6], int grids[6])
   //read all sensors and convert to distance and grids
   for (int i = 0; i < 6; i++) {
     distance[i] = distInCM(i, EXPLORE);
-    grids[i]	  = distInGrids(distance[i] - offset[i]);
+    grids[i]	= distInGrids(distance[i] - offset[i]);
     rectifyGrid(grids, i);				//logically correct number of grids
     updateGrid(grids, i);
   }
@@ -724,7 +729,7 @@ void compass()
 void location()
 {
   compass();		//update direction
-  
+
   if (motion == '0') {
     //coordinates only update when moving forward
     switch (_direction) {
@@ -776,7 +781,7 @@ void printMap()
 /*Mark obstacle on the map.*/
 void updateGrid(int grids[6], int sensor)
 {
-	int x_obs, y_obs, offset;
+	int x_obs, y_obs;
 	int sensor_coord[2];
 
 	//when an obstacle is detected
@@ -820,7 +825,7 @@ void updateGrid(int grids[6], int sensor)
 			else if (_direction == E) {
 				//sensor is at SE
 				sensorLocation(sensor_coord, SE);
-				x_obs = sensor_coord[X] + grids[sensor];
+				x_obs = sensor_coord[X] + 1 + grids[sensor];
 				y_obs = sensor_coord[Y];
 			}
 			else if (_direction == S) {
@@ -952,7 +957,8 @@ void updateGrid(int grids[6], int sensor)
 		}
 
 		//mark obstacle within map
-		if (x_obs < 15 && y_obs < 20) _map[y_obs][x_obs] = 'B';
+		//if (x_obs < 15 && y_obs < 20) _map[y_obs][x_obs] = 'B';
+		_map[y_obs][x_obs] = 'B';
 	}
 }
 
@@ -1014,7 +1020,7 @@ void makeDecision(int grids[6])
     if (grids[LONG_LEFT] == 0 && (grids[SIDE_RIGHT_FRONT] == 0 || prev_state[SIDE_RIGHT_FRONT] == 0 || grids[SIDE_RIGHT_BACK] == 0)) {
       //obstacle on both left and right sides
       //move_back_1(); motion = '3';
-		smartReverse();
+	  smartReverse();
     }
     else if (grids[SIDE_RIGHT_FRONT] == 0 || prev_state[SIDE_RIGHT_FRONT] == 0 || grids[SIDE_RIGHT_BACK] == 0) {
       //obstacle on the right side
@@ -1031,7 +1037,7 @@ void makeDecision(int grids[6])
 
 void smartReverse()
 {
-	int grids = 2;
+	int grids = 0;
 	boolean right_clear = false;
 	boolean left_clear  = false;
 
@@ -1040,48 +1046,69 @@ void smartReverse()
 	//immediately check for obstacles in map starting from 3 grids before current location
 	case N:
 		//reverse towards south
-		coordinates[Y] += 2;
+		//coordinates[Y] += 2;
 
 		while (!right_clear && !left_clear) {
 			coordinates[Y]++;
 			grids++;
 
-			if (_map[coordinates[Y] - 1][coordinates[X] - 2] != 'B' &&
-				_map[coordinates[Y]][coordinates[X]     - 2] != 'B' &&
-				_map[coordinates[Y] + 1][coordinates[X] - 2] != 'B') {
+			if (_map[coordinates[Y] - 1][coordinates[X] - 2] == 'X' &&
+				_map[coordinates[Y]][coordinates[X]     - 2] == 'X' &&
+				_map[coordinates[Y] + 1][coordinates[X] - 2] == 'X' ||
+				_map[coordinates[Y] - 1][coordinates[X] - 2] == '0' &&
+				_map[coordinates[Y]][coordinates[X]		- 2] == '0' &&
+				_map[coordinates[Y] + 1][coordinates[X] - 2] == '0') {
 				//no obstacles detected west-side
 				left_clear = true;
 			}
 
-			if (_map[coordinates[Y] - 1][coordinates[X] + 2] != 'B' &&
-				_map[coordinates[Y]][coordinates[X]     + 2] != 'B' &&
-				_map[coordinates[Y] + 1][coordinates[X] + 2] != 'B') {
+			if (_map[coordinates[Y] - 1][coordinates[X] + 2] == 'X' &&
+				_map[coordinates[Y]][coordinates[X]     + 2] == 'X' &&
+				_map[coordinates[Y] + 1][coordinates[X] + 2] == 'X' ||
+				_map[coordinates[Y] - 1][coordinates[X] + 2] == '0' &&
+				_map[coordinates[Y]][coordinates[X]		+ 2] == '0' &&
+				_map[coordinates[Y] + 1][coordinates[X] + 2] == '0') {
 				//no obstacles detected east-side
 				right_clear = true;
 			}
 
+			Serial.println("----------------------------------");
+			Serial.println(_map[coordinates[Y] - 1][coordinates[X] - 2]);
+			Serial.println(_map[coordinates[Y]][coordinates[X] - 2]);
+			Serial.println(_map[coordinates[Y] + 1][coordinates[X] - 2]);
+			Serial.println("----------------------------------");
+			Serial.println(_map[coordinates[Y] - 1][coordinates[X] + 2]);
+			Serial.println(_map[coordinates[Y]][coordinates[X] + 2]);
+			Serial.println(_map[coordinates[Y] + 1][coordinates[X] + 2]);
+			Serial.println("----------------------------------");
 		}
 
 		break;
 
 	case E:
 		//reverse towards west
-		coordinates[X] -= 2;
+		//coordinates[X] -= 2;
 
 		while (!right_clear && !left_clear) {
 			coordinates[X]--;
 			grids++;
 
-			if (_map[coordinates[Y] - 2][coordinates[X] - 1] != 'B' &&
-				_map[coordinates[Y] - 2][coordinates[X]]     != 'B' &&
-				_map[coordinates[Y] - 2][coordinates[X] + 1] != 'B') {
+			if (_map[coordinates[Y] - 2][coordinates[X] - 1] == 'X' &&
+				_map[coordinates[Y] - 2][coordinates[X]]     == 'X' &&
+				_map[coordinates[Y] - 2][coordinates[X] + 1] == 'X' ||
+				_map[coordinates[Y] - 2][coordinates[X] - 1] == '0' &&
+				_map[coordinates[Y] - 2][coordinates[X]]	 == '0' &&
+				_map[coordinates[Y] - 2][coordinates[X] + 1] == '0') {
 				//no obstacles detected north-side
 				left_clear = true;
 			}
 
-			if (_map[coordinates[Y] + 2][coordinates[X] - 1] != 'B' &&
-				_map[coordinates[Y] + 2][coordinates[X]]     != 'B' &&
-				_map[coordinates[Y] + 2][coordinates[X] + 1] != 'B') {
+			if (_map[coordinates[Y] + 2][coordinates[X] - 1] == 'X' &&
+				_map[coordinates[Y] + 2][coordinates[X]]     == 'X' &&
+				_map[coordinates[Y] + 2][coordinates[X] + 1] == 'X' ||
+				_map[coordinates[Y] + 2][coordinates[X] - 1] == '0' &&
+				_map[coordinates[Y] + 2][coordinates[X]]	 == '0' &&
+				_map[coordinates[Y] + 2][coordinates[X] + 1] == '0') {
 				//no obstacles detected south-side
 				right_clear = true;
 			}
@@ -1091,22 +1118,28 @@ void smartReverse()
 
 	case S:
 		//reverse towards north
-		coordinates[Y] -= 2;
+		//coordinates[Y] -= 2;
 
 		while (!right_clear && !left_clear) {
 			coordinates[Y]--;
 			grids++;
 
-			if (_map[coordinates[Y] - 1][coordinates[X] + 2] != 'B' &&
-				_map[coordinates[Y]][coordinates[X]     + 2] != 'B' &&
-				_map[coordinates[Y] + 1][coordinates[X] + 2] != 'B') {
+			if (_map[coordinates[Y] - 1][coordinates[X] + 2] == 'X' &&
+				_map[coordinates[Y]][coordinates[X]     + 2] == 'X' &&
+				_map[coordinates[Y] + 1][coordinates[X] + 2] == 'X' ||
+				_map[coordinates[Y] - 1][coordinates[X] + 2] == '0' &&
+				_map[coordinates[Y]][coordinates[X]		+ 2] == '0' &&
+				_map[coordinates[Y] + 1][coordinates[X] + 2] == '0') {
 				//no obstacles detected east-side
 				left_clear = true;
 			}
 
-			if (_map[coordinates[Y] - 1][coordinates[X] - 2] != 'B' &&
-				_map[coordinates[Y]][coordinates[X]     - 2] != 'B' &&
-				_map[coordinates[Y] + 1][coordinates[X] - 2] != 'B') {
+			if (_map[coordinates[Y] - 1][coordinates[X] - 2] == 'X' &&
+				_map[coordinates[Y]][coordinates[X]     - 2] == 'X' &&
+				_map[coordinates[Y] + 1][coordinates[X] - 2] == 'X' ||
+				_map[coordinates[Y] - 1][coordinates[X] - 2] == '0' &&
+				_map[coordinates[Y]][coordinates[X]		- 2] == '0' &&
+				_map[coordinates[Y] + 1][coordinates[X] - 2] == '0') {
 				//no obstacles detected west-side
 				right_clear = true;
 			}
@@ -1116,22 +1149,28 @@ void smartReverse()
 
 	case W:
 		//reverse towards east
-		coordinates[X] += 2;
+		//coordinates[X] += 2;
 
 		while (!right_clear && !left_clear) {
 			coordinates[X]++;
 			grids++;
 
-			if (_map[coordinates[Y] + 2][coordinates[X] - 1] != 'B' &&
-				_map[coordinates[Y] + 2][coordinates[X]]     != 'B' &&
-				_map[coordinates[Y] + 2][coordinates[X] + 1] != 'B') {
+			if (_map[coordinates[Y] + 2][coordinates[X] - 1] == 'X' &&
+				_map[coordinates[Y] + 2][coordinates[X]]     == 'X' &&
+				_map[coordinates[Y] + 2][coordinates[X] + 1] == 'X' ||
+				_map[coordinates[Y] + 2][coordinates[X] - 1] == '0' &&
+				_map[coordinates[Y] + 2][coordinates[X]]	 == '0' &&
+				_map[coordinates[Y] + 2][coordinates[X] + 1] == '0') {
 				//no obstacles detected south-side
 				left_clear = true;
 			}
 
-			if (_map[coordinates[Y] - 2][coordinates[X] - 1] != 'B' &&
-				_map[coordinates[Y] - 2][coordinates[X]]     != 'B' &&
-				_map[coordinates[Y] - 2][coordinates[X] + 1] != 'B') {
+			if (_map[coordinates[Y] - 2][coordinates[X] - 1] == 'X' &&
+				_map[coordinates[Y] - 2][coordinates[X]]     == 'X' &&
+				_map[coordinates[Y] - 2][coordinates[X] + 1] == 'X' ||
+				_map[coordinates[Y] - 2][coordinates[X] - 1] == '0' &&
+				_map[coordinates[Y] - 2][coordinates[X]]	 == '0' &&
+				_map[coordinates[Y] - 2][coordinates[X] + 1] == '0') {
 				//no obstacles detected north-side
 				right_clear = true;
 			}
