@@ -58,8 +58,6 @@ static int coordinates[2];
 #define W     3                   //west
 static int _direction = 1;        //face east at the beginning
 
-static int _map[20][15];
-
 uint8_t EnPwmCmd[4] = { 0x44, 0x02, 0xbb, 0x01 };
 
 // # Connection:
@@ -96,18 +94,6 @@ void initialisation() {
 	//initialise coordinates
 	coordinates[X] = 1;
 	coordinates[Y] = 18;
-
-	//initialise map
-	for (int y = 0; y < 20; y++) {
-		for (int x = 0; x < 15; x++) {
-			if ((12 <= x && x <= 14) && (0 <= y && y <= 2))
-				_map[y][x] = 'E';
-			else if ((0 <= x && x <= 2) && (17 <= y && y <= 19))
-				_map[y][x] = 'S';
-			else
-				_map[y][x] = '0';
-		}
-	}
 
 	//initialise command array
 	for (int i = 0; i < SIZE; i++) command[i] = '_';
@@ -251,11 +237,6 @@ void loop()
 			ackCommand(command);
 			Serial.println("T Parallel calibration...");
 			parallelCalibration();
-			break;
-
-		case 'l':
-			ackCommand(command);
-			printMap();
 			break;
 
 		case 's':
@@ -446,7 +427,6 @@ void readSensors(float distance[6], int grids[6])
 		distance[i] = distInCM(i, EXPLORE);
 		grids[i]	= distInGrids(distance[i] - offset[i]);
 		rectifyGrid(grids, i);		//logically correct number of grids
-		updateGrid(grids, i);		//update obstacle on map
 	}
 
 	//end of current state
@@ -535,21 +515,6 @@ void rectifyGrid(int grids[6], int i)
 			//only rectify after turning left (90 degrees)
 			grids[i] = prev_state[FRONT_RIGHT];
 		}
-	}
-}
-
-/*Mark obstacle on the map.*/
-void updateGrid(int grids[6], int sensor)
-{
-	int x, y, offset;
-
-	//when an obstacle is detected
-	if (grids[sensor] != -1) {
-		offset = grids[sensor] + 2;
-		x	   = coordinates[X] + offset;
-		y	   = coordinates[Y] + offset;
-
-		if (x < 15 && y < 20) _map[y][x] = '1';	//mark obstacle within map
 	}
 }
 
@@ -738,28 +703,11 @@ void location()
 		}
 	}
 
-	_map[coordinates[Y]][coordinates[X]] = 'X';
-
 	Serial.print("T (");
 	Serial.print(coordinates[X]);
 	Serial.print(", ");
 	Serial.print(coordinates[Y]);
 	Serial.println(')');
-}
-
-void printMap()
-{
-	for (int y = 0; y < 20; y++) {
-		Serial.print("T ");
-
-		for (int x = 0; x < 15; x++) {
-			Serial.print(_map[y][x]);
-		}
-
-		Serial.println();
-	}
-
-	Serial.println("T ====================================");
 }
 
 /*
