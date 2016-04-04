@@ -138,10 +138,12 @@ void loop()
 
 		//move forward
 		case '0':
-			ackCommand(command[0]);
+			ackCommand(command);
 			
 			//convert the last 2 chars in command to int
-			num_grids = command.substring(1).toInt();
+			if (command == "0") num_grids = 1;
+			else				num_grids = command.substring(1).toInt();
+
 			move_up(num_grids);
 
 			if (explore) {
@@ -155,7 +157,7 @@ void loop()
 
 		//turn right
 		case '1':
-			ackCommand(command[0]);
+			ackCommand(command);
 			move_right_1();
 
 			if (explore) {
@@ -169,7 +171,7 @@ void loop()
 
 		//turn left
 		case '2':
-			ackCommand(command[0]);
+			ackCommand(command);
 			move_left_1();
 
 			if (explore) {
@@ -183,7 +185,7 @@ void loop()
 
 		//turn back 180 degrees
 		case '3':
-			ackCommand(command[0]);
+			ackCommand(command);
 			move_back_1();
 
 			if (explore) {
@@ -197,7 +199,7 @@ void loop()
 
 		//begin exploration
 		case '4':
-			ackCommand(command[0]);
+			ackCommand(command);
 			initialCalibration();
 			Serial.println("T Begin exploration...");
 			location();
@@ -208,18 +210,18 @@ void loop()
 
 		//begin fastest run
 		case '5':
-			ackCommand(command[0]);
+			ackCommand(command);
 		    explore = false;
 			break;
 
 		//ALGO Front Calibration
 		case '6':
-			ackCommand(command[0]);
+			ackCommand(command);
 			proximityCalibration();
 			break;
 
 		case '7':
-			ackCommand(command[0]);
+			ackCommand(command);
 			move_right_1();
 			proximityCalibration();
 			move_left_1();
@@ -228,36 +230,36 @@ void loop()
 
 		//end exploration
 		case '8':
-			ackCommand(command[0]);
+			ackCommand(command);
 			explore = false;
 			Serial.println("T End exploration...");
 			break;
 
 		case 'i':
-			ackCommand(command[0]);
+			ackCommand(command);
 			Serial.println("T Proximity calibration...");
 			proximityCalibration();
 			break;
 
 		case 'o':
-			ackCommand(command[0]);
+			ackCommand(command);
 			Serial.println("T Side proximity calibration...");
 			sideProximityCalibration();
 			break;
 
 		case 'p':
-			ackCommand(command[0]);
+			ackCommand(command);
 			Serial.println("T Parallel calibration...");
 			parallelCalibration();
 			break;
 
 		case 'l':
-			ackCommand(command[0]);
+			ackCommand(command);
 			printMap();
 			break;
 
 		case 's':
-			ackCommand(command[0]);
+			ackCommand(command);
 			readSensors(distance, grids);
 			sendGrids(grids);
 			break;
@@ -294,7 +296,7 @@ void charToInt()
 }
 
 /*Acknowledge command.*/
-void ackCommand(char cmd)
+void ackCommand(String cmd)
 {
 	Serial.println(cmd);
 }

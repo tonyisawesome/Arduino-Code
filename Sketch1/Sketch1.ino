@@ -47,7 +47,6 @@ int pinM2 = 5;
 static double m1_kp, m1_ki, m1_kd, m2_kp, m2_ki, m2_kd, m1_k1, m1_k2, m1_k3, m2_k1, m2_k2, m2_k3;
 static char command[SIZE];        //command received from RPi
 static char motion;
-static char map_loc;
 static int offset[6];
 static int prev_state[6];
 static int value            = 0;
@@ -1019,8 +1018,8 @@ void makeDecision(int grids[6])
     //obstacle in front
     if (grids[LONG_LEFT] == 0 && (grids[SIDE_RIGHT_FRONT] == 0 || prev_state[SIDE_RIGHT_FRONT] == 0 || grids[SIDE_RIGHT_BACK] == 0)) {
       //obstacle on both left and right sides
-      //move_back_1(); motion = '3';
-	  smartReverse();
+      move_back_1(); motion = '3';
+	  //smartReverse();
     }
     else if (grids[SIDE_RIGHT_FRONT] == 0 || prev_state[SIDE_RIGHT_FRONT] == 0 || grids[SIDE_RIGHT_BACK] == 0) {
       //obstacle on the right side
@@ -1035,7 +1034,7 @@ void makeDecision(int grids[6])
   Serial.println(motion);
 }
 
-void smartReverse()
+/*void smartReverse()
 {
 	int grids = 0;
 	boolean right_clear = false;
@@ -1171,6 +1170,143 @@ void smartReverse()
 				_map[coordinates[Y] - 2][coordinates[X] - 1] == '0' &&
 				_map[coordinates[Y] - 2][coordinates[X]]	 == '0' &&
 				_map[coordinates[Y] - 2][coordinates[X] + 1] == '0') {
+				//no obstacles detected north-side
+				right_clear = true;
+			}
+		}
+
+		break;
+
+	default: grids = 0;
+	}
+
+	reverse(grids); motion = 'r';
+	location();
+
+	//turning left has higher priority than turning right
+	if (left_clear) {
+		move_left_1(); motion = '2';
+		compass();						//update current direction
+		Serial.println(motion);
+		move_up(1); motion = '0';
+	}
+	else {
+		move_back_1(); motion = '3';
+	}
+}*/
+
+void smartReverse()
+{
+	int grids = 0;
+	boolean right_clear = false;
+	boolean left_clear = false;
+
+	//current direction
+	switch (_direction) {
+		//immediately check for obstacles in map starting from 3 grids before current location
+	case N:
+		//reverse towards south
+		//coordinates[Y] += 2;
+
+		while (!right_clear && !left_clear) {
+			coordinates[Y]++;
+			grids++;
+
+			if (_map[coordinates[Y] - 1][coordinates[X] - 2] != 'B' &&
+				_map[coordinates[Y]][coordinates[X] - 2] != 'B' &&
+				_map[coordinates[Y] + 1][coordinates[X] - 2] != 'B') {
+				//no obstacles detected west-side
+				left_clear = true;
+			}
+
+			if (_map[coordinates[Y] - 1][coordinates[X] + 2] != 'B' &&
+				_map[coordinates[Y]][coordinates[X] + 2] != 'B' &&
+				_map[coordinates[Y] + 1][coordinates[X] + 2] != 'B') {
+				//no obstacles detected east-side
+				right_clear = true;
+			}
+
+			Serial.println("----------------------------------");
+			Serial.println(_map[coordinates[Y] - 1][coordinates[X] - 2]);
+			Serial.println(_map[coordinates[Y]][coordinates[X] - 2]);
+			Serial.println(_map[coordinates[Y] + 1][coordinates[X] - 2]);
+			Serial.println("----------------------------------");
+			Serial.println(_map[coordinates[Y] - 1][coordinates[X] + 2]);
+			Serial.println(_map[coordinates[Y]][coordinates[X] + 2]);
+			Serial.println(_map[coordinates[Y] + 1][coordinates[X] + 2]);
+			Serial.println("----------------------------------");
+		}
+
+		break;
+
+	case E:
+		//reverse towards west
+		//coordinates[X] -= 2;
+
+		while (!right_clear && !left_clear) {
+			coordinates[X]--;
+			grids++;
+
+			if (_map[coordinates[Y] - 2][coordinates[X] - 1] != 'B' &&
+				_map[coordinates[Y] - 2][coordinates[X]] != 'B' &&
+				_map[coordinates[Y] - 2][coordinates[X] + 1] != 'B') {
+				//no obstacles detected north-side
+				left_clear = true;
+			}
+
+			if (_map[coordinates[Y] + 2][coordinates[X] - 1] != 'B' &&
+				_map[coordinates[Y] + 2][coordinates[X]] != 'B' &&
+				_map[coordinates[Y] + 2][coordinates[X] + 1] != 'B') {
+				//no obstacles detected south-side
+				right_clear = true;
+			}
+		}
+
+		break;
+
+	case S:
+		//reverse towards north
+		//coordinates[Y] -= 2;
+
+		while (!right_clear && !left_clear) {
+			coordinates[Y]--;
+			grids++;
+
+			if (_map[coordinates[Y] - 1][coordinates[X] + 2] != 'B' &&
+				_map[coordinates[Y]][coordinates[X] + 2] != 'B' &&
+				_map[coordinates[Y] + 1][coordinates[X] + 2] != 'B') {
+				//no obstacles detected east-side
+				left_clear = true;
+			}
+
+			if (_map[coordinates[Y] - 1][coordinates[X] - 2] != 'B' &&
+				_map[coordinates[Y]][coordinates[X] - 2] != 'B' &&
+				_map[coordinates[Y] + 1][coordinates[X] - 2] != 'B') {
+				//no obstacles detected west-side
+				right_clear = true;
+			}
+		}
+
+		break;
+
+	case W:
+		//reverse towards east
+		//coordinates[X] += 2;
+
+		while (!right_clear && !left_clear) {
+			coordinates[X]++;
+			grids++;
+
+			if (_map[coordinates[Y] + 2][coordinates[X] - 1] != 'B' &&
+				_map[coordinates[Y] + 2][coordinates[X]] != 'B' &&
+				_map[coordinates[Y] + 2][coordinates[X] + 1] != 'B') {
+				//no obstacles detected south-side
+				left_clear = true;
+			}
+
+			if (_map[coordinates[Y] - 2][coordinates[X] - 1] != 'B' &&
+				_map[coordinates[Y] - 2][coordinates[X]] != 'B' &&
+				_map[coordinates[Y] - 2][coordinates[X] + 1] != 'B') {
 				//no obstacles detected north-side
 				right_clear = true;
 			}
