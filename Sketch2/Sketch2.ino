@@ -46,6 +46,7 @@ static char command[SIZE];        //command received from RPi
 static char motion = '_';
 static short offset[6];
 static short prev_state[6];
+static short mid_sensor = 0;	  //obstacle on the right at the beginning
 static boolean test = false;
 static boolean goal_zone = false;
 static boolean turned_right = false;
@@ -108,12 +109,14 @@ void initialisation() {
 	coordinates[Y] = 19;
 
 	//initialise map
-	for (short y = 0; y < 20; y++) {
-		for (short x = 0; x < 15; x++) {
-			if ((12 <= x && x <= 14) && (0 <= y && y <= 2))
+	for (short y = 0; y < 22; y++) {
+		for (short x = 0; x < 17; x++) {
+			if ((13 <= x && x <= 15) && (1 <= y && y <= 3))
 				_map[y][x] = 'G';
-			else if ((0 <= x && x <= 2) && (17 <= y && y <= 19))
+			else if ((1 <= x && x <= 3) && (18 <= y && y <= 20))
 				_map[y][x] = 'S';
+			else if ((x == 0 || x == 16) || (y == 0 || y == 21))
+				_map[y][x] = 'B';
 			else
 				_map[y][x] = '0';
 		}
@@ -127,10 +130,10 @@ void initialisation() {
 	}
 
 	//initialise offset array
-	offset[FRONT_LEFT] = offset[FRONT_RIGHT] = FRONT_OFFSET;         //front left and right are reflective to each other
-	offset[FRONT_MID] = FRONT_MID_OFFSET;
-	offset[LONG_LEFT] = LONG_LEFT_OFFSET;
-	offset[SIDE_RIGHT_BACK] = offset[SIDE_RIGHT_FRONT] = SIDE_RIGHT_OFFSET;    //side right back and front are reflective to each other
+	offset[FRONT_LEFT]      = offset[FRONT_RIGHT]      = FRONT_OFFSET;         //front left and right are of the same alignment
+	offset[FRONT_MID]                                  = FRONT_MID_OFFSET;
+	offset[LONG_LEFT]                                  = LONG_LEFT_OFFSET;
+  offset[SIDE_RIGHT_BACK] = offset[SIDE_RIGHT_FRONT] = SIDE_RIGHT_OFFSET;
 }
 
 /*======================================*/
@@ -188,6 +191,10 @@ void loop()
 			Serial.println("T Begin shortest path...");
 			break;
 
+		case 'r':
+			readSensors(distance, grids);
+			break;
+
 			//print map
 		case 'p':
 			//location();
@@ -221,6 +228,7 @@ void explore(float distance[6], short grids[6])
 			break;							//stop exploration
 		else {
 			readSensors(distance, grids);
+			setMidSensor();
 			printGrids(grids);
 			robotCalibration(distance, grids);
 			delay(10);
@@ -228,7 +236,8 @@ void explore(float distance[6], short grids[6])
 			updatePrevStates(grids);		//end of current state
 		}
 
-		//printMap();
+		printMap();
+    //delay(500);
 	}
 
 	Serial.println("T End exploration...");
@@ -369,6 +378,7 @@ void readSensors(float distance[6], short grids[6])
 	//read all sensors and convert to distance and grids
 	for (short i = 0; i < 6; i++) {
 		distance[i] = distInCM(i, EXPLORE);
+		Serial.print("Sensor "); Serial.print(i); Serial.print(": "); Serial.print(distance[i]); Serial.println(" cm");
 		grids[i] = distInGrids(distance[i] - offset[i]);
 		rectifyGrid(grids, i);				//logically correct number of grids
 		updateGrid(grids, i);
@@ -480,6 +490,18 @@ void rectifyGrid(short grids[6], short i)
 	}
 }
 
+void setMidSensor()
+{
+	switch (motion) {
+	case '0':	//move forward
+		mid_sensor = prev_state[SIDE_RIGHT_FRONT];
+		break;
+	case '2':	//turn left
+		mid_sensor = prev_state[FRONT_MID];
+		break;
+	}
+}
+
 /*======================================*/
 /*             Calibrations             */
 /*======================================*/
@@ -525,24 +547,24 @@ void proximityCalibration()
 	int timer_end = timer_start;
 
 	while ((timer_end - timer_start) < TIMEOUT && (!left_calibrate || !right_calibrate)) {
-		if (FL_sensor < (FRONT_OFFSET - 0.1)) {
+		if (FL_sensor < (FRONT_OFFSET - 0.3)) {
 			md.setM1Speed(-180);
 			delay(8);
 			md.setM1Speed(0);
 		}
-		else if (FL_sensor >(FRONT_OFFSET + 0.1)) {
+		else if (FL_sensor >(FRONT_OFFSET - 0.1)) {
 			md.setM1Speed(180);
 			delay(8);
 			md.setM1Speed(0);
 		}
 		else left_calibrate = true;
 
-		if (FR_sensor < (FRONT_OFFSET - 0.1)) {
+		if (FR_sensor < (FRONT_OFFSET - 0.3)) {
 			md.setM2Speed(-180);
 			delay(8);
 			md.setM2Speed(0);
 		}
-		else if (FR_sensor >(FRONT_OFFSET + 0.1)) {
+		else if (FR_sensor >(FRONT_OFFSET - 0.1)) {
 			md.setM2Speed(180);
 			delay(8);
 			md.setM2Speed(0);
@@ -879,7 +901,7 @@ void updateGrid(short grids[6], short sensor)
 		}
 
 		//mark obstacle within map
-		if (0 < x_obs < 16 && 0 < y_obs < 21) _map[y_obs][x_obs] = 'B';
+		if ((0 < x_obs && x_obs < 16) && (0 < y_obs && y_obs < 21)) _map[y_obs][x_obs] = 'B';
 		//_map[y_obs][x_obs] = 'B';
 	}
 }
@@ -932,19 +954,19 @@ void makeDecision(short grids[6])
 {
 	Serial.println("T Making decision...");
 
-	if (!turned_right &&  grids[SIDE_RIGHT_FRONT] != 0 && prev_state[SIDE_RIGHT_FRONT] != 0 && grids[SIDE_RIGHT_BACK] != 0) {
+	if (!turned_right &&  grids[SIDE_RIGHT_FRONT] != 0 && mid_sensor != 0 && grids[SIDE_RIGHT_BACK] != 0) {
 		//no obstacles on the right side and did not turn right previously
 		move_right_1(); motion = '1';
 		turned_right = true;
 	}
 	else if (grids[FRONT_RIGHT] == 0 || grids[FRONT_MID] == 0 || grids[FRONT_LEFT] == 0) {
 		//obstacle in front
-		if (grids[LONG_LEFT] == 0 && (grids[SIDE_RIGHT_FRONT] == 0 || prev_state[SIDE_RIGHT_FRONT] == 0 || grids[SIDE_RIGHT_BACK] == 0)) {
+		if (grids[LONG_LEFT] == 0 && (grids[SIDE_RIGHT_FRONT] == 0 || mid_sensor == 0 || grids[SIDE_RIGHT_BACK] == 0)) {
 			//obstacle on both left and right sides
-			move_back_1(); motion = '3';
-			//smartReverse();
+			//move_back_1(); motion = '3';
+			smartReverse();
 		}
-		else if (grids[SIDE_RIGHT_FRONT] == 0 || prev_state[SIDE_RIGHT_FRONT] == 0 || grids[SIDE_RIGHT_BACK] == 0) {
+		else if (grids[SIDE_RIGHT_FRONT] == 0 || mid_sensor == 0 || grids[SIDE_RIGHT_BACK] == 0) {
 			//obstacle on the right side
 			move_left_1(); motion = '2';
 		}
