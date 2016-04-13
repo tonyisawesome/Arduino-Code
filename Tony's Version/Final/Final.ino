@@ -1,7 +1,6 @@
-
 /* Efforts:
    Motors  - Tan Yng Tzer
-   Sensors - Chau Jing Shend & Lim Cheng Siang
+   Sensors - Chau Jing Sheng & Lim Cheng Siang
    Algorithm & mapping - Lim Cheng Siang
 */
 
@@ -54,7 +53,7 @@ static char command[SIZE];        //command received from RPi
 static char motion = '_';
 static short offset[6];
 static short prev_state[6];
-static short mid_sensor = 0;	  //obstacle on the right at the beginning
+static short right_mid_sensor = 0;	  //obstacle on the right at the beginning
 static boolean test = false;
 static boolean goal_zone = false;
 static boolean turned_right = false;
@@ -547,10 +546,10 @@ void setMidSensor()
 {
   switch (motion) {
     case '0':	//move forward
-      mid_sensor = prev_state[SIDE_RIGHT_FRONT];
+      right_mid_sensor = prev_state[SIDE_RIGHT_FRONT];
       break;
     case '2':	//turn left
-      mid_sensor = prev_state[FRONT_MID];
+      right_mid_sensor = prev_state[FRONT_MID];
       break;
   }
 }
@@ -1003,23 +1002,24 @@ void sensorLocation(short sensor_coord[2], short relative_loc)
 /*               Algorithm              */
 /*======================================*/
 
+/*For exploration.*/
 void makeDecision(short grids[6])
 {
   Serial.println("T Making decision...");
 
-  if (!turned_right &&  grids[SIDE_RIGHT_FRONT] != 0 && mid_sensor != 0 && grids[SIDE_RIGHT_BACK] != 0) {
-    //no obstacles on the right side and did not turn right previously
+  if (!turned_right &&  grids[SIDE_RIGHT_FRONT] != 0 && right_mid_sensor != 0 && grids[SIDE_RIGHT_BACK] != 0) {
+    //did not turn right previously and no obstacles on the right side
     move_right_1(); motion = '1';
     turned_right = true;
   }
   else if (grids[FRONT_RIGHT] == 0 || grids[FRONT_MID] == 0 || grids[FRONT_LEFT] == 0) {
     //obstacle in front
-    if (grids[LONG_LEFT] == 0 && (grids[SIDE_RIGHT_FRONT] == 0 || mid_sensor == 0 || grids[SIDE_RIGHT_BACK] == 0)) {
+    if (grids[LONG_LEFT] == 0 && (grids[SIDE_RIGHT_FRONT] == 0 || right_mid_sensor == 0 || grids[SIDE_RIGHT_BACK] == 0)) {
       //obstacle on both left and right sides
       //move_back_1(); motion = '3';
       smartReverse();
     }
-    else if (grids[SIDE_RIGHT_FRONT] == 0 || mid_sensor == 0 || grids[SIDE_RIGHT_BACK] == 0) {
+    else if (grids[SIDE_RIGHT_FRONT] == 0 || right_mid_sensor == 0 || grids[SIDE_RIGHT_BACK] == 0) {
       //obstacle on the right side
       move_left_1(); motion = '2';
     }
@@ -1040,24 +1040,21 @@ void smartReverse()
 
   //current direction
   switch (_direction) {
-    //immediately check for obstacles in map starting from 3 grids before current location
     case N:
       //reverse towards south
-      //coordinates[Y] += 2;
-
       while (!right_clear && !left_clear) {
         coordinates[Y]++;
         grids++;
 
         if (_map[coordinates[Y] - 1][coordinates[X] - 2] != 'B' &&
-            _map[coordinates[Y]][coordinates[X] - 2] != 'B' &&
+            _map[coordinates[Y]][coordinates[X] - 2]     != 'B' &&
             _map[coordinates[Y] + 1][coordinates[X] - 2] != 'B') {
           //no obstacles detected west-side
           left_clear = true;
         }
 
         if (_map[coordinates[Y] - 1][coordinates[X] + 2] != 'B' &&
-            _map[coordinates[Y]][coordinates[X] + 2] != 'B' &&
+            _map[coordinates[Y]][coordinates[X] + 2]     != 'B' &&
             _map[coordinates[Y] + 1][coordinates[X] + 2] != 'B') {
           //no obstacles detected east-side
           right_clear = true;
@@ -1068,21 +1065,19 @@ void smartReverse()
 
     case E:
       //reverse towards west
-      //coordinates[X] -= 2;
-
       while (!right_clear && !left_clear) {
         coordinates[X]--;
         grids++;
 
         if (_map[coordinates[Y] - 2][coordinates[X] - 1] != 'B' &&
-            _map[coordinates[Y] - 2][coordinates[X]] != 'B' &&
+            _map[coordinates[Y] - 2][coordinates[X]]     != 'B' &&
             _map[coordinates[Y] - 2][coordinates[X] + 1] != 'B') {
           //no obstacles detected north-side
           left_clear = true;
         }
 
         if (_map[coordinates[Y] + 2][coordinates[X] - 1] != 'B' &&
-            _map[coordinates[Y] + 2][coordinates[X]] != 'B' &&
+            _map[coordinates[Y] + 2][coordinates[X]]     != 'B' &&
             _map[coordinates[Y] + 2][coordinates[X] + 1] != 'B') {
           //no obstacles detected south-side
           right_clear = true;
@@ -1093,21 +1088,19 @@ void smartReverse()
 
     case S:
       //reverse towards north
-      //coordinates[Y] -= 2;
-
       while (!right_clear && !left_clear) {
         coordinates[Y]--;
         grids++;
 
         if (_map[coordinates[Y] - 1][coordinates[X] + 2] != 'B' &&
-            _map[coordinates[Y]][coordinates[X] + 2] != 'B' &&
+            _map[coordinates[Y]][coordinates[X] + 2]     != 'B' &&
             _map[coordinates[Y] + 1][coordinates[X] + 2] != 'B') {
           //no obstacles detected east-side
           left_clear = true;
         }
 
         if (_map[coordinates[Y] - 1][coordinates[X] - 2] != 'B' &&
-            _map[coordinates[Y]][coordinates[X] - 2] != 'B' &&
+            _map[coordinates[Y]][coordinates[X] - 2]     != 'B' &&
             _map[coordinates[Y] + 1][coordinates[X] - 2] != 'B') {
           //no obstacles detected west-side
           right_clear = true;
@@ -1118,21 +1111,19 @@ void smartReverse()
 
     case W:
       //reverse towards east
-      //coordinates[X] += 2;
-
       while (!right_clear && !left_clear) {
         coordinates[X]++;
         grids++;
 
         if (_map[coordinates[Y] + 2][coordinates[X] - 1] != 'B' &&
-            _map[coordinates[Y] + 2][coordinates[X]] != 'B' &&
+            _map[coordinates[Y] + 2][coordinates[X]]     != 'B' &&
             _map[coordinates[Y] + 2][coordinates[X] + 1] != 'B') {
           //no obstacles detected south-side
           left_clear = true;
         }
 
         if (_map[coordinates[Y] - 2][coordinates[X] - 1] != 'B' &&
-            _map[coordinates[Y] - 2][coordinates[X]] != 'B' &&
+            _map[coordinates[Y] - 2][coordinates[X]]     != 'B' &&
             _map[coordinates[Y] - 2][coordinates[X] + 1] != 'B') {
           //no obstacles detected north-side
           right_clear = true;
@@ -1145,7 +1136,7 @@ void smartReverse()
   }
 
   reverse(grids); motion = 'r';
-  location();
+  location();   //update robot's current location and direction after reversing
 
   //turning left has higher priority than turning right
   if (left_clear) {
@@ -1155,6 +1146,6 @@ void smartReverse()
     move_up(1); motion = '0';
   }
   else {
-    move_back_1(); motion = '3';
+    move_back_1(); motion = '3';  //2 possible cases: turn right or move forward
   }
 }

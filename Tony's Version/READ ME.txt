@@ -1,0 +1,5 @@
+(1) Algorithm and mapping have already been implemented in this version.
+(2) Motors need to be calibrated
+(3) Sensor offsets need to be adjusted
+
+-Lim Cheng Siang, Tony

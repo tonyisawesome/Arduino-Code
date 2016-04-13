@@ -292,7 +292,7 @@ void pidHYQ(short forward_left, short forward_right, short fast) {
 
   int baseSpeed = 200;
 
-  if(fast) baseSpeed = 300;
+  if(fast) baseSpeed = 330;
   
   int speedLeft  = baseSpeed + adjustLeft;      //baseSpeedLeft is a constant
   int speedRight = baseSpeed + adjustRight;     //baseSpeedRight is a constant
@@ -345,7 +345,26 @@ void move_up(char grid)
   short fast = true;
 
   switch (grid) {
-    case 'a':  left_motor = 302;  right_motor = 303;  fast = false; break;  //1
+    case 'a':  left_motor = 303;  right_motor = 305;  fast = false; break;  //1
+    /*
+    case 'b':  left_motor = 608;  right_motor = 610;  break;  //2
+    case 'c':  left_motor = 912;  right_motor = 915;  break;  //3
+    case 'd':  left_motor = 1216; right_motor = 1220; break;  //4
+    case 'e':  left_motor = 1520; right_motor = 1525; break;  //5
+    case 'f':  left_motor = 1824; right_motor = 1830; break;  //6
+    case 'g':  left_motor = 2128; right_motor = 2135; break;  //7
+    case 'h':  left_motor = 2432; right_motor = 2440; break;  //8
+    case 'i':  left_motor = 2736; right_motor = 2745; break;  //9
+    case 'j': left_motor = 3040; right_motor = 3050; break;   //10
+    case 'k': left_motor = 3344; right_motor = 3355; break;   //11
+    case 'l': left_motor = 3648; right_motor = 3660; break;   //12
+    case 'm': left_motor = 3952; right_motor = 3965; break;   //13
+    case 'n': left_motor = 4256; right_motor = 4270; break;   //14
+    case 'o': left_motor = 4560; right_motor = 4575; break;   //15
+    case 'p': left_motor = 4864; right_motor = 4880; break;   //16
+    case 'q': left_motor = 5168; right_motor = 5185; break;   //17
+    case 'r': left_motor = 5472; right_motor = 5490; break;   //18
+    */
     case 'b':  left_motor = 591;  right_motor = 591;  break;  //2
     case 'c':  left_motor = 885;  right_motor = 885;  break;  //3
     case 'd':  left_motor = 1179; right_motor = 1179; break;  //4
@@ -363,23 +382,24 @@ void move_up(char grid)
     case 'p': left_motor = 4757; right_motor = 4757; break;   //16
     case 'q': left_motor = 5051; right_motor = 5051; break;   //17
     case 'r': left_motor = 5345; right_motor = 5345; break;   //18
+    
     default: left_motor = 0;    right_motor = 0;
       Serial.println("T Invalid number of grids!");
   }
 
-  execute_move(true, true, left_motor, 19, right_motor, 22, fast);
+  execute_move(true, true, left_motor, 23, right_motor, 27, fast); // 19 23
 }
 
 void move_left_1() {
-  execute_move(false, true, 405, 17, 406, 16, false);
+  execute_move(false, true, 406, 20, 406, 18, false); // original : 404, 16, 405, 18
 }
 
 void move_right_1() {
-  execute_move(true, false, 404, 18, 405, 17, false); // battery not full :403, 16, 404, 18
+  execute_move(true, false, 406, 23, 406, 18, false); // orginal : 402 17 405 18 | 4 turn : 407 23 405 18
 }
 
 void move_back_1() {
-  execute_move(false, true, 821, 17, 822, 20, false);
+  execute_move(false, true, 813, 20, 813, 20, false);
 }
 
 void reset()
@@ -709,3 +729,4 @@ void location()
 
 	test after move up will calibrate if there is a obs
 */
+
